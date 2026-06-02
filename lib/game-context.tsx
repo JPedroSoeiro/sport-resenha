@@ -21,7 +21,8 @@ import { AVAILABLE_TEAMS_PL, getPLTeamPlayers } from "./team-data-pl"
 import { FREE_AGENTS_POOL } from "./data/players-pool"
 import { FREE_AGENTS_POOL_EUROPE } from "./data/players-pool-europe"
 import { DECREES_POOL, FINANCIAL_CARDS_POOL } from "./data/cards-pool"
-import type { ChampionshipId } from "./game-types"
+import { EVENTS_POOL, MILD_EVENTS, type SpecialEventDef } from "./data/events-pool"
+import type { ChampionshipId, PendingSpecialEvent, SpecialEventResult } from "./game-types"
 
 export type { Player, Team, Position, GamePhase, PresidentialDecree, FinancialCard }
 
@@ -41,6 +42,7 @@ type GameAction =
   | { type: "CONFIRM_SELECTIONS" }
   | { type: "PLACE_BID"; teamId: number; amount: number }
   | { type: "WITHDRAW_BID"; teamId: number }
+  | { type: "DISMISS_SPECIAL_EVENT" }
   | { type: "RESET_GAME" }
 
 // ─── Initial State ────────────────────────────────────────────────────────────
@@ -73,7 +75,63 @@ function getInitialState(): GameState {
     gameStarted: false,
     gameEnded: false,
     auctionLosers: {},
+    pendingSpecialEvent: undefined,
   }
+}
+
+// ─── Rodadas que disparam eventos especiais (índice 0-based) ─────────────────
+const SPECIAL_EVENT_ROUNDS = new Set([2, 6]) // após posições 3 e 7
+
+function pickEvent(pool: SpecialEventDef[], usedIds: Set<string>): SpecialEventDef {
+  const available = pool.filter(e => !usedIds.has(e.id))
+  if (available.length === 0) return pool[Math.floor(Math.random() * pool.length)]
+  return available[Math.floor(Math.random() * available.length)]
+}
+
+function buildTeamResults(
+  state: GameState,
+  usedEventIds: Set<string>
+): Record<number, SpecialEventResult> {
+  const results: Record<number, SpecialEventResult> = {}
+  const pool = SPECIAL_EVENT_ROUNDS.has(state.currentPositionIndex) && state.currentPositionIndex <= 3
+    ? MILD_EVENTS
+    : EVENTS_POOL
+
+  for (const team of state.teams) {
+    const ev = pickEvent(pool, usedEventIds)
+    usedEventIds.add(ev.id)
+
+    let budgetDelta = 0
+    let playerName: string | undefined
+    let injuredPosition: string | undefined
+
+    if (ev.effect === "budget_add") budgetDelta = ev.value ?? 0
+    else if (ev.effect === "budget_sub") budgetDelta = -(ev.value ?? 0)
+    else if (ev.effect === "budget_pct_add") budgetDelta = Math.floor(team.initialBudget * (ev.pct ?? 0.1))
+    else if (ev.effect === "budget_pct_sub") budgetDelta = -Math.floor(team.initialBudget * (ev.pct ?? 0.1))
+    else if (ev.effect === "free_player") {
+      const freeT3 = state.freeAgents.filter(p => p.tier === 3)
+      const pick = freeT3[Math.floor(Math.random() * freeT3.length)]
+      playerName = pick?.name
+    }
+    else if (ev.effect === "injury") {
+      const titulares = state.players.filter(p => p.teamId === team.id && !p.isReserva && !p.sold)
+      const pick = titulares[Math.floor(Math.random() * titulares.length)]
+      if (pick) { injuredPosition = pick.position; playerName = pick.name }
+    }
+
+    results[team.id] = {
+      eventId: ev.id,
+      name: ev.name,
+      icon: ev.icon,
+      theme: ev.theme,
+      description: ev.description,
+      budgetDelta,
+      playerName,
+      injuredPosition,
+    }
+  }
+  return results
 }
 
 // ─── Market Generation (bug-fixed: strict 1×T1, 1×T2, 1×T3, no repeats) ────
@@ -382,9 +440,9 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       if (nextIdx >= ns.positionRounds.length) {
         return { ...ns, phase: "evaluation", gameEnded: true, marketSelections: {}, soldInCurrentRound: [], roundTransferOptions: [] }
       }
-      return {
+
+      const baseNext = {
         ...ns,
-        phase: "decision",
         currentPositionIndex: nextIdx,
         currentTeamIndex: 0,
         marketSelections: {},
@@ -393,6 +451,82 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         auctionLosers: {},
         teams: ns.teams.map(t => ({ ...t, blockedPositions: [] })),
       }
+
+      // Verificar se esta é uma rodada de evento especial (usando nextIdx-1 = posição que acabou)
+      if (SPECIAL_EVENT_ROUNDS.has(ns.currentPositionIndex)) {
+        const usedIds = new Set<string>()
+        const teamResults = buildTeamResults(ns, usedIds)
+        const pending: PendingSpecialEvent = { roundIndex: ns.currentPositionIndex, teamResults }
+        return { ...baseNext, phase: "special-event", pendingSpecialEvent: pending }
+      }
+
+      return { ...baseNext, phase: "decision" }
+    }
+
+    case "DISMISS_SPECIAL_EVENT": {
+      const pending = state.pendingSpecialEvent
+      if (!pending) return { ...state, phase: "decision" }
+
+      let ns = { ...state }
+
+      // Aplicar efeitos de todos os times
+      for (const [tidStr, result] of Object.entries(pending.teamResults)) {
+        const tid = Number(tidStr)
+        const team = ns.teams.find(t => t.id === tid)
+        if (!team) continue
+
+        // Efeito de orçamento
+        if (result.budgetDelta !== 0) {
+          const entry: FinancialHistoryEntry = {
+            type: "financial_card",
+            playerName: result.name,
+            position: "Goleiro",
+            amount: result.budgetDelta,
+            timestamp: Date.now(),
+            details: result.description,
+          }
+          ns = {
+            ...ns,
+            teams: ns.teams.map(t =>
+              t.id === tid
+                ? { ...t, currentBudget: Math.max(0, t.currentBudget + result.budgetDelta), financialHistory: [...t.financialHistory, entry] }
+                : t
+            ),
+          }
+        }
+
+        // Revelação da base — jogador T3 grátis
+        if (result.eventId === "revelacao" && result.playerName) {
+          const freePlayer = ns.freeAgents.find(p => p.name === result.playerName && p.tier === 3)
+          if (freePlayer) {
+            ns = {
+              ...ns,
+              players: [...ns.players, { ...freePlayer, teamId: tid }],
+              freeAgents: ns.freeAgents.filter(p => p.id !== freePlayer.id),
+            }
+          }
+        }
+
+        // Lesão — bloqueia a posição (reserva ativa)
+        if (result.eventId === "lesao" && result.injuredPosition) {
+          const pos = result.injuredPosition as import("./game-types").Position
+          // Marcar o titular como lesionado (sold=true) e ativar reserva
+          const injuredPlayer = ns.players.find(p => p.teamId === tid && p.position === pos && !p.isReserva && !p.sold)
+          const reserve = ns.players.find(p => p.teamId === tid && p.position === pos && p.isReserva && !p.sold)
+          if (injuredPlayer) {
+            ns = {
+              ...ns,
+              players: ns.players.map(p => {
+                if (p.id === injuredPlayer.id) return { ...p, sold: true }
+                if (reserve && p.id === reserve.id) return { ...p, activatedFromReserve: true, isReserva: false, lostAuction: true }
+                return p
+              }),
+            }
+          }
+        }
+      }
+
+      return { ...ns, phase: "decision", pendingSpecialEvent: undefined }
     }
 
     case "PLACE_BID": {
@@ -450,9 +584,10 @@ function gameReducer(state: GameState, action: GameAction): GameState {
           amount: finalPrice,
           timestamp: Date.now(),
         }
-        return {
+
+        // Estado base após resolver o leilão (vencedor leva o jogador, perdedor fica com reserva)
+        let ns: GameState = {
           ...state,
-          phase: "market",
           players: [...newPlayers, { ...player, teamId: winnerId }],
           freeAgents: state.freeAgents.filter(p => p.id !== player.id),
           teams: newTeams.map(t =>
@@ -460,12 +595,95 @@ function gameReducer(state: GameState, action: GameAction): GameState {
               ? { ...t, currentBudget: t.currentBudget - finalPrice, financialHistory: [...t.financialHistory, winEntry] }
               : t
           ),
-          marketSelections: Object.fromEntries(
-            Object.entries(state.marketSelections).filter(([tid]) => Number(tid) !== winnerId && Number(tid) !== action.teamId)
-          ),
           bidding: { player: null, teams: [], currentBids: {}, activeTeamIndex: 0 },
           auctionLosers: newAuctionLosers,
         }
+
+        // Processar seleções restantes (times que não participaram do leilão já haviam escolhido)
+        const remainingSelections = Object.fromEntries(
+          Object.entries(state.marketSelections).filter(
+            ([tid]) => Number(tid) !== winnerId && Number(tid) !== action.teamId
+          )
+        )
+
+        for (const [tidStr, pid] of Object.entries(remainingSelections)) {
+          const tid = Number(tidStr)
+          if (pid !== null) {
+            const pl =
+              ns.freeAgents.find(p => p.id === pid) ||
+              ns.roundTransferOptions.find(o => o.player.id === pid)?.player
+            if (!pl) continue
+            const team = ns.teams.find(t => t.id === tid)
+            if (!team || team.currentBudget < pl.value) continue
+            const signingEntry: FinancialHistoryEntry = {
+              type: "signing",
+              playerName: pl.name,
+              position: pl.position,
+              amount: pl.value,
+              timestamp: Date.now(),
+            }
+            ns = {
+              ...ns,
+              players: [...ns.players, { ...pl, teamId: tid }],
+              freeAgents: ns.freeAgents.filter(p => p.id !== pid),
+              teams: ns.teams.map(t =>
+                t.id === tid
+                  ? { ...t, currentBudget: t.currentBudget - pl.value, financialHistory: [...t.financialHistory, signingEntry] }
+                  : t
+              ),
+            }
+          } else {
+            // Time escolheu usar o reserva
+            const teamReserve = ns.players.find(
+              p => p.teamId === tid && p.position === pos && p.isReserva && !p.sold
+            )
+            if (teamReserve) {
+              ns = {
+                ...ns,
+                players: ns.players.map(p =>
+                  p.id === teamReserve.id ? { ...p, activatedFromReserve: true, isReserva: false } : p
+                ),
+              }
+            }
+          }
+        }
+
+        // Avançar para a próxima posição (ou evento especial / avaliação)
+        const nextIdx = ns.currentPositionIndex + 1
+        if (nextIdx >= ns.positionRounds.length) {
+          return {
+            ...ns,
+            phase: "evaluation",
+            gameEnded: true,
+            marketSelections: {},
+            soldInCurrentRound: [],
+            roundTransferOptions: [],
+          }
+        }
+
+        const baseNext: GameState = {
+          ...ns,
+          phase: "decision",
+          currentPositionIndex: nextIdx,
+          currentTeamIndex: 0,
+          marketSelections: {},
+          soldInCurrentRound: [],
+          roundTransferOptions: [],
+          auctionLosers: {},
+          teams: ns.teams.map(t => ({ ...t, blockedPositions: [] })),
+        }
+
+        if (SPECIAL_EVENT_ROUNDS.has(ns.currentPositionIndex)) {
+          const usedIds = new Set<string>()
+          const teamResults = buildTeamResults(ns, usedIds)
+          return {
+            ...baseNext,
+            phase: "special-event",
+            pendingSpecialEvent: { roundIndex: ns.currentPositionIndex, teamResults },
+          }
+        }
+
+        return baseNext
       }
 
       return {

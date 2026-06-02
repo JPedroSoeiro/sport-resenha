@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { ShoppingCart, Check, DollarSign, AlertTriangle, Flag, Shield, Ban, UserCheck, ChevronRight } from "lucide-react"
 import { POSITION_LABELS } from "@/lib/game-types"
 import { cn } from "@/lib/utils"
+import { toast } from "sonner"
 
 const TIER_STYLE = {
   1: {
@@ -47,16 +48,35 @@ function PlayerMarketCard({ player, isSelected, onSelect, canAfford, blockMsg }:
   const ts = TIER_STYLE[player.tier as 1 | 2 | 3]
   const disabled = !canAfford || !!blockMsg
 
+  const handleClick = () => {
+    if (blockMsg) {
+      toast.error("Decreto violado!", {
+        description: blockMsg,
+        duration: 3500,
+        icon: "📜",
+      })
+      return
+    }
+    if (!canAfford) {
+      toast.warning("Orçamento insuficiente!", {
+        description: `Você precisa de ${formatCurrency(player.value)} mas tem menos disponível.`,
+        duration: 3000,
+      })
+      return
+    }
+    onSelect()
+  }
+
   return (
     <div
-      onClick={() => !disabled && onSelect()}
+      onClick={handleClick}
       className={cn(
-        "relative rounded-xl border-2 p-5 transition-all select-none",
+        "relative rounded-xl border-2 p-5 transition-all select-none cursor-pointer",
         isSelected
           ? ts.selectedBorder + " bg-card"
           : disabled
-          ? "border-border/40 bg-card/50 cursor-not-allowed opacity-55"
-          : cn("cursor-pointer bg-card hover:border-primary/40", ts.border)
+          ? "border-border/40 bg-card/50 opacity-55"
+          : cn("bg-card hover:border-primary/40", ts.border)
       )}
     >
       {/* Tier label — inline no topo do card */}

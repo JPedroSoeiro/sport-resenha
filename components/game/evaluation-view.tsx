@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { useGame } from "@/lib/game-context"
 import { POSITION_ORDER, POSITION_LABELS, POSITION_SHORT, type Position } from "@/lib/game-types"
 import { TacticalField } from "./tactical-field"
@@ -8,8 +8,10 @@ import { Button } from "@/components/ui/button"
 import {
   Trophy, DollarSign, RotateCcw, Award,
   TrendingUp, TrendingDown, UserCheck, Share2, Check,
-  History, Gavel, FileText, Star,
+  History, Gavel, FileText, Star, Image,
 } from "lucide-react"
+import { toPng } from "html-to-image"
+import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 
 const GRADE_STYLE: Record<string, { bg: string; text: string; border: string; glow?: string }> = {
@@ -44,10 +46,30 @@ export function EvaluationView() {
   const [copied, setCopied] = useState<number | null>(null)
   const [historyId, setHistoryId] = useState<number | null>(null)
   const [fieldId, setFieldId] = useState<number | null>(null)
+  const [exportingId, setExportingId] = useState<number | null>(null)
+  const cardRefs = useRef<Record<number, HTMLDivElement | null>>({})
 
   const scores = state.teams.map(team => ({ team, ...calculateTeamScore(team.id) }))
   const sorted = [...scores].sort((a, b) => b.score - a.score)
   const winner = sorted[0]
+
+  const handleExportImage = async (teamId: number) => {
+    const el = cardRefs.current[teamId]
+    if (!el) return
+    setExportingId(teamId)
+    try {
+      const dataUrl = await toPng(el, { cacheBust: true, quality: 0.95, pixelRatio: 2 })
+      const link = document.createElement("a")
+      link.download = `elenco-${state.teams.find(t => t.id === teamId)?.shortName ?? teamId}.png`
+      link.href = dataUrl
+      link.click()
+      toast.success("Imagem exportada!", { description: "Download iniciado automaticamente." })
+    } catch {
+      toast.error("Erro ao exportar imagem", { description: "Tente novamente." })
+    } finally {
+      setExportingId(null)
+    }
+  }
 
   const handleCopy = async (teamId: number) => {
     const text = exportSquadText(teamId)
@@ -132,6 +154,7 @@ export function EvaluationView() {
           return (
             <div
               key={team.id}
+              ref={(el) => { cardRefs.current[team.id] = el }}
               className={cn(
                 "rounded-2xl border-2 overflow-hidden flex flex-col",
                 i === 0 ? "border-amber-500/50 bg-amber-500/3" : "border-border bg-card"
@@ -328,7 +351,7 @@ export function EvaluationView() {
               </div>
 
               {/* Actions */}
-              <div className="p-4 flex gap-2 mt-auto">
+              <div className="p-4 flex gap-2 mt-auto flex-wrap">
                 <Button
                   variant="outline"
                   size="sm"
@@ -346,7 +369,19 @@ export function EvaluationView() {
                 >
                   {copied === team.id
                     ? <><Check className="w-3.5 h-3.5 mr-1 text-primary" />Copiado!</>
-                    : <><Share2 className="w-3.5 h-3.5 mr-1" />Exportar</>
+                    : <><Share2 className="w-3.5 h-3.5 mr-1" />Texto</>
+                  }
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => handleExportImage(team.id)}
+                  disabled={exportingId === team.id}
+                >
+                  {exportingId === team.id
+                    ? <><span className="w-3.5 h-3.5 mr-1 animate-spin inline-block border-2 border-primary border-t-transparent rounded-full" />Gerando...</>
+                    : <><Image className="w-3.5 h-3.5 mr-1" />Imagem</>
                   }
                 </Button>
               </div>

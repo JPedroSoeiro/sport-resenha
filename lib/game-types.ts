@@ -110,7 +110,24 @@ export type GamePhase =
   | "decision"
   | "market"
   | "bidding"
+  | "special-event"
   | "evaluation"
+
+export interface SpecialEventResult {
+  eventId: string
+  name: string
+  icon: string
+  theme: "positive" | "negative" | "neutral"
+  description: string
+  budgetDelta: number       // valor já calculado (+/-)
+  playerName?: string       // para "revelacao" ou "injury"
+  injuredPosition?: string  // para "injury"
+}
+
+export interface PendingSpecialEvent {
+  roundIndex: number
+  teamResults: Record<number, SpecialEventResult>  // teamId → resultado
+}
 
 export interface RoundTransferOption {
   tier: Tier
@@ -148,6 +165,7 @@ export interface GameState {
   gameStarted: boolean
   gameEnded: boolean
   auctionLosers: Record<number, Position[]>
+  pendingSpecialEvent?: PendingSpecialEvent
 }
 
 // 11 positions in game order (decision rounds sequence)
