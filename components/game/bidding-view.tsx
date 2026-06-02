@@ -2,221 +2,193 @@
 
 import { useGame } from "@/lib/game-context"
 import { Button } from "@/components/ui/button"
-import { Gavel, Plus, X, DollarSign, TrendingUp, Flag, Shield, AlertTriangle, UserCheck } from "lucide-react"
+import { Gavel, Plus, X, DollarSign, TrendingUp, Flag, Shield, AlertTriangle, UserCheck, Zap } from "lucide-react"
+import { POSITION_LABELS } from "@/lib/game-types"
 import { cn } from "@/lib/utils"
 
-const TIER_COLORS = {
-  1: { bg: "bg-amber-500/20", border: "border-amber-500/30", text: "text-amber-600 dark:text-amber-400", label: "Elite" },
-  2: { bg: "bg-slate-400/20", border: "border-slate-400/30", text: "text-slate-600 dark:text-slate-400", label: "Regular" },
-  3: { bg: "bg-orange-700/20", border: "border-orange-700/30", text: "text-orange-700 dark:text-orange-400", label: "Econômico" },
-}
+const TIER_STYLE = {
+  1: { badge: "bg-amber-500/20 text-amber-500 border-amber-500/30 tier-1-glow", val: "text-amber-500" },
+  2: { badge: "bg-slate-400/20 text-slate-400 border-slate-400/30",               val: "text-slate-400" },
+  3: { badge: "bg-orange-800/20 text-orange-500 border-orange-700/30",             val: "text-orange-500" },
+} as const
 
 export function BiddingView() {
   const { state, dispatch, formatCurrency, getManagerName, getReserveForPosition, getCurrentPosition } = useGame()
-
   const { bidding } = state
   const player = bidding.player
-  const biddingTeams = bidding.teams.map((id) => state.teams.find((t) => t.id === id)!)
-  const currentPosition = getCurrentPosition()
+  const pos = getCurrentPosition()
 
   if (!player) return null
 
-  const tierStyle = TIER_COLORS[player.tier]
-  const highestBid = Math.max(...Object.values(bidding.currentBids))
-  const highestBidder = Object.entries(bidding.currentBids).find(
-    ([, bid]) => bid === highestBid
-  )?.[0]
+  const ts = TIER_STYLE[player.tier as 1 | 2 | 3]
+  const bids = Object.entries(bidding.currentBids).map(([tid, v]) => ({ teamId: Number(tid), bid: v }))
+  const highest = Math.max(...bids.map(b => b.bid))
+  const leaderId = bids.find(b => b.bid === highest)?.teamId
 
-  const handleBid = (teamId: number, amount: number) => {
-    const team = state.teams.find((t) => t.id === teamId)!
-    const currentBid = bidding.currentBids[teamId] || player.value
-    const newBid = currentBid + amount
-
+  const handleBid = (teamId: number, inc: number) => {
+    const team = state.teams.find(t => t.id === teamId)!
+    const newBid = highest + inc
     if (newBid > team.currentBudget) return
-
-    dispatch({ type: "PLACE_BID", teamId, amount })
-  }
-
-  const handleWithdraw = (teamId: number) => {
-    dispatch({ type: "WITHDRAW_BID", teamId })
+    dispatch({ type: "PLACE_BID", teamId, amount: inc })
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-sm overflow-auto py-8">
-      <div className="w-full max-w-4xl mx-4">
-        {/* Header */}
-        <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-destructive/20 border border-destructive/30 mb-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-auto py-6 px-4 bg-background/96 backdrop-blur-sm">
+      <div className="w-full max-w-3xl screen-enter">
+        {/* Header badge */}
+        <div className="flex justify-center mb-5">
+          <div className="flex items-center gap-2 px-5 py-2 rounded-full bg-destructive/15 border border-destructive/30">
             <Gavel className="w-5 h-5 text-destructive" />
-            <span className="text-sm font-bold text-destructive uppercase tracking-wider">Leilão Manual</span>
+            <span className="text-sm font-bold text-destructive uppercase tracking-widest">Leilão Manual</span>
+            <Zap className="w-4 h-4 text-destructive animate-pulse" />
           </div>
-          <h2 className="text-3xl font-bold text-foreground" style={{ fontFamily: 'var(--font-oswald)' }}>
-            DISPUTA POR {player.name.toUpperCase()}
-          </h2>
-          <p className="text-muted-foreground mt-2">Dois ou mais times querem o mesmo jogador!</p>
         </div>
 
-        {/* Player Card */}
-        <div className={cn(
-          "mx-auto max-w-md rounded-2xl border-2 p-6 mb-6",
-          tierStyle.border,
-          "bg-card"
-        )}>
+        <h2 className="text-3xl font-bold text-center text-foreground mb-1" style={{ fontFamily: "var(--font-oswald)" }}>
+          DISPUTA POR {player.name.toUpperCase()}
+        </h2>
+        <p className="text-center text-sm text-muted-foreground mb-6">
+          Dois ou mais times querem o mesmo {POSITION_LABELS[player.position]}!
+        </p>
+
+        {/* Player summary card */}
+        <div className={cn("mx-auto max-w-md rounded-2xl border-2 p-5 bg-card mb-6", `border-${player.tier === 1 ? "amber" : player.tier === 2 ? "slate" : "orange"}-500/40`)}>
           <div className="flex items-center gap-4">
-            <div className={cn(
-              "w-16 h-16 rounded-xl flex items-center justify-center font-bold text-2xl",
-              tierStyle.bg,
-              tierStyle.text
-            )}>
+            <div className={cn("w-14 h-14 rounded-xl flex items-center justify-center font-bold text-xl border-2", ts.badge)}>
               T{player.tier}
             </div>
             <div className="flex-1">
-              <h3 className="text-2xl font-bold text-foreground">{player.name}</h3>
-              <p className="text-muted-foreground">{player.position}</p>
-              <div className="flex items-center gap-3 mt-2">
-                <div className="flex items-center gap-1 text-xs text-muted-foreground/70">
-                  <Flag className="w-3 h-3" />
-                  <span>{player.nationality}</span>
-                </div>
-                <div className={cn("flex items-center gap-1 text-xs", tierStyle.text)}>
-                  <Shield className="w-3 h-3" />
-                  <span>{tierStyle.label}</span>
-                </div>
+              <h3 className="text-xl font-bold text-foreground">{player.name}</h3>
+              <p className="text-sm text-muted-foreground">{POSITION_LABELS[player.position]}</p>
+              <div className="flex items-center gap-3 mt-1">
+                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Flag className="w-3 h-3" />{player.nationality}
+                </span>
+                <span className={cn("flex items-center gap-1 text-xs", ts.val)}>
+                  <Shield className="w-3 h-3" />{player.category}
+                </span>
               </div>
             </div>
             <div className="text-right">
-              <p className="text-xs text-muted-foreground">Valor Base</p>
-              <p className="text-lg font-bold text-primary">{formatCurrency(player.value)}</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Valor base</p>
+              <p className={cn("text-lg font-bold", ts.val)}>{formatCurrency(player.value)}</p>
             </div>
           </div>
 
-          {/* Current Highest Bid */}
-          <div className="mt-6 p-4 rounded-xl bg-primary/10 border border-primary/30">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-primary" />
-                <span className="text-sm text-muted-foreground">Lance Atual Mais Alto</span>
-              </div>
-              <span className="text-2xl font-bold text-primary">
-                {formatCurrency(highestBid)}
-              </span>
+          {/* Highest bid display */}
+          <div className="mt-4 p-3 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-primary" />
+              <span className="text-xs text-muted-foreground">Lance mais alto</span>
             </div>
-            {highestBidder && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Líder: {state.teams.find((t) => t.id === Number(highestBidder))?.name}
-              </p>
-            )}
+            <div className="text-right">
+              <span className="text-xl font-bold text-primary">{formatCurrency(highest)}</span>
+              {leaderId && (
+                <p className="text-[10px] text-muted-foreground">
+                  {state.teams.find(t => t.id === leaderId)?.name}
+                </p>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Bidding Teams */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          {biddingTeams.map((team, index) => {
-            const isActive = index === bidding.activeTeamIndex
-            const currentBid = bidding.currentBids[team.id] || player.value
-            const isHighest = currentBid === highestBid && currentBid > player.value
-            const canBid1M = team.currentBudget >= currentBid + 1000000
-            const canBid5M = team.currentBudget >= currentBid + 5000000
-            const reserve = getReserveForPosition(team.id, currentPosition)
+        {/* Bidding team cards */}
+        <div className={cn(
+          "grid gap-4 mb-6",
+          bidding.teams.length === 2 ? "grid-cols-2" : "grid-cols-1 max-w-sm mx-auto"
+        )}>
+          {bidding.teams.map((tid, idx) => {
+            const team = state.teams.find(t => t.id === tid)!
+            const isActive = idx === bidding.activeTeamIndex
+            const curBid = bidding.currentBids[tid] || player.value
+            const isLeader = curBid === highest && curBid > player.value
+            // O próximo lance precisa superar o maior lance atual
+            const can1M = team.currentBudget >= highest + 1_000_000
+            const can5M = team.currentBudget >= highest + 5_000_000
+            const reserve = getReserveForPosition(tid, pos)
 
             return (
               <div
-                key={team.id}
+                key={tid}
                 className={cn(
                   "rounded-2xl border-2 p-5 transition-all",
                   isActive
-                    ? "border-primary bg-primary/5 ring-2 ring-primary ring-offset-2 ring-offset-background"
+                    ? "border-primary bg-primary/5 dark:neon-green"
                     : "border-border bg-card"
                 )}
               >
-                {/* Team Header */}
+                {/* Team header */}
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <div
-                      className="w-12 h-12 rounded-lg flex items-center justify-center font-bold border-2"
+                      className="w-11 h-11 rounded-lg flex items-center justify-center font-bold text-sm border-2"
                       style={{
                         backgroundColor: team.primaryColor,
                         color: team.secondaryColor,
-                        borderColor: team.primaryColor === "#000000" ? "#333" : team.primaryColor,
+                        borderColor: team.primaryColor === "#1a1a1a" ? "#555" : team.primaryColor,
                       }}
                     >
                       {team.shortName}
                     </div>
                     <div>
-                      <h4 className="font-bold text-foreground">{team.name}</h4>
-                      <p className="text-xs text-muted-foreground">{getManagerName(team.id)}</p>
-                      <div className="flex items-center gap-1 mt-1">
+                      <p className="font-bold text-foreground text-sm">{team.name}</p>
+                      <p className="text-[11px] text-muted-foreground">{getManagerName(tid)}</p>
+                      <div className="flex items-center gap-1">
                         <DollarSign className="w-3 h-3 text-primary" />
-                        <span className="text-sm text-primary">
-                          {formatCurrency(team.currentBudget)}
-                        </span>
+                        <span className="text-xs text-primary font-semibold">{formatCurrency(team.currentBudget)}</span>
                       </div>
                     </div>
                   </div>
-
                   <div className="flex flex-col items-end gap-1">
-                    {isHighest && (
-                      <div className="px-2 py-1 rounded bg-primary/20 text-primary text-xs font-bold">
-                        LÍDER
-                      </div>
+                    {isLeader && (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-primary/20 text-primary uppercase">Líder</span>
                     )}
                     {isActive && (
-                      <div className="px-2 py-1 rounded bg-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-bold">
-                        SUA VEZ
-                      </div>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-500 uppercase animate-pulse">
+                        Sua Vez
+                      </span>
                     )}
                   </div>
                 </div>
 
-                {/* Current Team Bid */}
+                {/* Current bid */}
                 <div className="p-3 rounded-lg bg-secondary border border-border mb-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Seu Lance</span>
-                    <span className="text-xl font-bold text-foreground">
-                      {formatCurrency(currentBid)}
+                    <span className="text-xs text-muted-foreground">Seu Lance Atual</span>
+                    <span className={cn("text-lg font-bold", isLeader ? "text-primary" : "text-foreground")}>
+                      {formatCurrency(curBid)}
                     </span>
                   </div>
-                  <p className="text-xs text-muted-foreground/70 mt-1">
-                    Saldo após lance: {formatCurrency(team.currentBudget - currentBid)}
-                  </p>
+                  {isActive && (
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                      Próximo mínimo: {formatCurrency(highest + 1_000_000)}
+                    </p>
+                  )}
                 </div>
 
-                {/* Actions - Only for active team */}
                 {isActive ? (
-                  <div className="space-y-3">
+                  <div className="space-y-2.5">
                     <div className="grid grid-cols-2 gap-2">
-                      <Button
-                        onClick={() => handleBid(team.id, 1000000)}
-                        disabled={!canBid1M}
-                        className="font-bold"
-                      >
-                        <Plus className="w-4 h-4 mr-1" />
-                        €1M
+                      <Button onClick={() => handleBid(tid, 1_000_000)} disabled={!can1M} className="font-bold h-10">
+                        <Plus className="w-3.5 h-3.5 mr-1" />€1M
                       </Button>
-                      <Button
-                        onClick={() => handleBid(team.id, 5000000)}
-                        disabled={!canBid5M}
-                        className="font-bold"
-                      >
-                        <Plus className="w-4 h-4 mr-1" />
-                        €5M
+                      <Button onClick={() => handleBid(tid, 5_000_000)} disabled={!can5M} className="font-bold h-10">
+                        <Plus className="w-3.5 h-3.5 mr-1" />€5M
                       </Button>
                     </div>
                     <Button
-                      onClick={() => handleWithdraw(team.id)}
+                      onClick={() => dispatch({ type: "WITHDRAW_BID", teamId: tid })}
                       variant="outline"
-                      className="w-full border-destructive text-destructive hover:bg-destructive/10"
+                      className="w-full h-10 border-destructive text-destructive hover:bg-destructive/10 font-bold"
                     >
-                      <X className="w-4 h-4 mr-2" />
-                      Desistir do Leilão
+                      <X className="w-4 h-4 mr-2" />Desistir
                     </Button>
-                    
                     {reserve && (
-                      <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/30 mt-2">
+                      <div className="p-2.5 rounded-lg bg-amber-500/8 border border-amber-500/25">
                         <div className="flex items-center gap-2">
-                          <UserCheck className="w-4 h-4 text-amber-500" />
-                          <p className="text-xs text-amber-600 dark:text-amber-400">
-                            Ao desistir, usará reserva: <strong>{reserve.name}</strong> (T{reserve.tier})
+                          <UserCheck className="w-3.5 h-3.5 text-amber-500" />
+                          <p className="text-[11px] text-amber-600 dark:text-amber-400">
+                            Ao desistir usará: <strong>{reserve.name}</strong> (T{reserve.tier})
                           </p>
                         </div>
                       </div>
@@ -224,7 +196,7 @@ export function BiddingView() {
                   </div>
                 ) : (
                   <p className="text-center text-sm text-muted-foreground py-4">
-                    Aguardando turno do adversário...
+                    Aguardando adversário…
                   </p>
                 )}
               </div>
@@ -232,16 +204,15 @@ export function BiddingView() {
           })}
         </div>
 
-        {/* Warning */}
-        <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 max-w-2xl mx-auto">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+        {/* Rule reminder */}
+        <div className="p-4 rounded-xl bg-amber-500/8 border border-amber-500/25 max-w-xl mx-auto">
+          <div className="flex items-start gap-2.5">
+            <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm text-amber-600 dark:text-amber-400 font-bold">Regra de Penalidade do Reserva</p>
-              <p className="text-xs text-amber-600/80 dark:text-amber-400/80 mt-1">
-                O time que <strong>desistir</strong> ou <strong>perder</strong> o leilão será automaticamente 
-                bloqueado de contratar nesta posição pelo resto da rodada e deverá usar seu <strong>jogador reserva</strong>.
-                O dinheiro da venda anterior permanece no banco.
+              <p className="text-xs font-bold text-amber-600 dark:text-amber-400 mb-0.5">Regra do Reserva</p>
+              <p className="text-xs text-amber-600/80 dark:text-amber-400/80">
+                O time que <strong>desistir</strong> é bloqueado de contratar nesta posição.
+                Seu <strong>reserva</strong> entra automaticamente e o dinheiro da venda fica no caixa.
               </p>
             </div>
           </div>

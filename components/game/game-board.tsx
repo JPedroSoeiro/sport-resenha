@@ -3,6 +3,7 @@
 import { useGame } from "@/lib/game-context"
 import { GameHeader } from "./game-header"
 import { TeamPanel } from "./team-panel"
+import { SplashView } from "./splash-view"
 import { HostSetupView } from "./host-setup-view"
 import { PlayerSetupView } from "./player-setup-view"
 import { DrawCardsView } from "./draw-cards-view"
@@ -10,74 +11,61 @@ import { DecisionView } from "./decision-view"
 import { MarketView } from "./market-view"
 import { BiddingView } from "./bidding-view"
 import { EvaluationView } from "./evaluation-view"
-import { AddPlayerButton } from "./add-player-button"
 
 export function GameBoard() {
   const { state } = useGame()
 
-  // Host setup phase - full screen
-  if (state.phase === "host-setup") {
-    return <HostSetupView />
-  }
+  if (state.phase === "splash")       return <SplashView />
+  if (state.phase === "host-setup")   return <HostSetupView />
+  if (state.phase === "player-setup") return <PlayerSetupView />
+  if (state.phase === "evaluation")   return (
+    <div className="min-h-screen bg-background">
+      <GameHeader />
+      <EvaluationView />
+    </div>
+  )
 
-  // Player setup phase - full screen
-  if (state.phase === "player-setup") {
-    return <PlayerSetupView />
-  }
-
-  // Full-screen evaluation view
-  if (state.phase === "evaluation") {
-    return (
-      <div className="min-h-screen bg-[#0a0a0f]">
-        <GameHeader />
-        <EvaluationView />
-      </div>
-    )
-  }
-
-  const renderActionCenter = () => {
+  const renderAction = () => {
     switch (state.phase) {
-      case "draw-cards":
-        return <DrawCardsView />
-      case "decision":
-        return <DecisionView />
-      case "market":
-        return <MarketView />
-      default:
-        return null
+      case "draw-cards": return <DrawCardsView />
+      case "decision":   return <DecisionView />
+      case "market":     return <MarketView />
+      default:           return null
     }
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col">
       <GameHeader />
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col lg:flex-row">
-        {/* Team Panels - Left Side on Desktop */}
-        <div className="lg:w-80 xl:w-96 flex-shrink-0 p-4 border-b lg:border-b-0 lg:border-r border-[#2a2a38] overflow-auto">
-          <div className="space-y-4">
-            {state.teams.map((team, index) => (
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        {/* Team panels — fixed left sidebar */}
+        <div className="
+          flex-shrink-0
+          lg:w-72 xl:w-80
+          flex flex-row lg:flex-col
+          gap-3 p-3
+          border-b lg:border-b-0 lg:border-r border-border
+          overflow-x-auto lg:overflow-y-auto lg:overflow-x-hidden
+        ">
+          {state.teams.map((team, i) => (
+            <div key={team.id} className="flex-shrink-0 lg:flex-shrink w-64 lg:w-full">
               <TeamPanel
-                key={team.id}
                 team={team}
-                isActive={state.gameStarted && !state.gameEnded && index === state.currentTeamIndex}
+                isActive={state.gameStarted && !state.gameEnded && i === state.currentTeamIndex}
               />
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
 
-        {/* Action Center - Main Area */}
-        <div className="flex-1 overflow-auto">
-          {renderActionCenter()}
+        {/* Action centre */}
+        <div className="flex-1 overflow-auto screen-enter">
+          {renderAction()}
         </div>
       </div>
 
-      {/* Bidding Overlay */}
+      {/* Bidding overlay */}
       {state.phase === "bidding" && <BiddingView />}
-
-      {/* Add Player FAB */}
-      <AddPlayerButton />
     </div>
   )
 }

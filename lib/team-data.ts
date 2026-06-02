@@ -1,5 +1,5 @@
-// Team Data - 10 Brasileirão Teams with Titular and Reserva players
-import { Player, Position, Nationality, Tier } from "./game-types"
+// Team Data – 10 Brasileirão Teams with 11 Titulares + 11 Reservas each
+import type { Player, Position, Nationality, Tier, Category } from "./game-types"
 
 export interface TeamConfig {
   id: number
@@ -7,343 +7,311 @@ export interface TeamConfig {
   shortName: string
   primaryColor: string
   secondaryColor: string
-  crest?: string
 }
 
 export const AVAILABLE_TEAMS: TeamConfig[] = [
-  { id: 1, name: "Corinthians", shortName: "COR", primaryColor: "#000000", secondaryColor: "#FFFFFF" },
-  { id: 2, name: "São Paulo", shortName: "SAO", primaryColor: "#FF0000", secondaryColor: "#FFFFFF" },
-  { id: 3, name: "Santos", shortName: "SAN", primaryColor: "#000000", secondaryColor: "#FFFFFF" },
-  { id: 4, name: "Palmeiras", shortName: "PAL", primaryColor: "#006437", secondaryColor: "#FFFFFF" },
-  { id: 5, name: "Flamengo", shortName: "FLA", primaryColor: "#C4161C", secondaryColor: "#000000" },
-  { id: 6, name: "Vasco", shortName: "VAS", primaryColor: "#000000", secondaryColor: "#FFFFFF" },
-  { id: 7, name: "Internacional", shortName: "INT", primaryColor: "#E30613", secondaryColor: "#FFFFFF" },
-  { id: 8, name: "Grêmio", shortName: "GRE", primaryColor: "#0066B3", secondaryColor: "#000000" },
-  { id: 9, name: "Atlético-MG", shortName: "CAM", primaryColor: "#000000", secondaryColor: "#FFFFFF" },
-  { id: 10, name: "Cruzeiro", shortName: "CRU", primaryColor: "#003DA5", secondaryColor: "#FFFFFF" },
+  { id: 1,  name: "Corinthians",   shortName: "COR", primaryColor: "#1a1a1a", secondaryColor: "#FFFFFF" },
+  { id: 2,  name: "São Paulo",     shortName: "SAO", primaryColor: "#CC0000", secondaryColor: "#FFFFFF" },
+  { id: 3,  name: "Santos",        shortName: "SAN", primaryColor: "#1a1a1a", secondaryColor: "#FFFFFF" },
+  { id: 4,  name: "Palmeiras",     shortName: "PAL", primaryColor: "#006437", secondaryColor: "#FFFFFF" },
+  { id: 5,  name: "Flamengo",      shortName: "FLA", primaryColor: "#C4161C", secondaryColor: "#000000" },
+  { id: 6,  name: "Vasco",         shortName: "VAS", primaryColor: "#1a1a1a", secondaryColor: "#FFFFFF" },
+  { id: 7,  name: "Internacional", shortName: "INT", primaryColor: "#E30613", secondaryColor: "#FFFFFF" },
+  { id: 8,  name: "Grêmio",        shortName: "GRE", primaryColor: "#0066B3", secondaryColor: "#000000" },
+  { id: 9,  name: "Atlético-MG",   shortName: "CAM", primaryColor: "#1a1a1a", secondaryColor: "#FFFFFF" },
+  { id: 10, name: "Cruzeiro",      shortName: "CRU", primaryColor: "#003DA5", secondaryColor: "#FFFFFF" },
 ]
 
-// Helper to create player
-let playerId = 1
-function createPlayer(
+// ─── Player Builder ───────────────────────────────────────────────────────────
+let _id = 1
+function p(
   name: string,
   teamId: number,
   position: Position,
   value: number,
   tier: Tier,
+  category: Category,
   nationality: Nationality,
-  isReserva: boolean = false
+  isReserva = false,
 ): Player {
-  return {
-    id: playerId++,
-    name,
-    teamId,
-    position,
-    value,
-    tier,
-    nationality,
-    isReserva,
-    sold: false,
-  }
+  return { id: _id++, name, teamId, position, value, tier, category, nationality, isReserva, sold: false }
 }
 
-// Team rosters with Titular and Reserva players
+// ─── Team Rosters ─────────────────────────────────────────────────────────────
 export function getTeamPlayers(teamId: number): Player[] {
-  playerId = (teamId - 1) * 20 + 1 // Reset ID based on team
-  
+  _id = (teamId - 1) * 22 + 1
+
   switch (teamId) {
-    case 1: // Corinthians
-      return [
-        // Titulares
-        createPlayer("Hugo Souza", 1, "Goleiro", 10000000, 1, "Brasileiro"),
-        createPlayer("Félix Torres", 1, "Zagueiro", 8000000, 1, "Colombiano"),
-        createPlayer("Cacá", 1, "Zagueiro", 5000000, 2, "Brasileiro"),
-        createPlayer("Matheuzinho", 1, "Lateral-Direito", 6000000, 2, "Brasileiro"),
-        createPlayer("Hugo", 1, "Lateral-Esquerdo", 4000000, 2, "Brasileiro"),
-        createPlayer("Raniele", 1, "Primeiro-Volante", 7000000, 2, "Brasileiro"),
-        createPlayer("Breno Bidon", 1, "Segundo-Volante", 5000000, 2, "Brasileiro"),
-        createPlayer("Rodrigo Garro", 1, "Meia-Armador", 12000000, 1, "Argentino"),
-        createPlayer("Wesley", 1, "Ponta-Direita", 8000000, 2, "Brasileiro"),
-        createPlayer("Romero", 1, "Ponta-Esquerda", 6000000, 2, "Paraguaio"),
-        createPlayer("Yuri Alberto", 1, "Centroavante", 15000000, 1, "Brasileiro"),
-        // Reservas
-        createPlayer("Matheus Donelli", 1, "Goleiro", 2000000, 3, "Brasileiro", true),
-        createPlayer("Raul Gustavo", 1, "Zagueiro", 2000000, 3, "Brasileiro", true),
-        createPlayer("Léo Mana", 1, "Lateral-Direito", 1500000, 3, "Brasileiro", true),
-        createPlayer("Diego Palacios", 1, "Lateral-Esquerdo", 2000000, 3, "Colombiano", true),
-        createPlayer("Ryan", 1, "Primeiro-Volante", 1500000, 3, "Brasileiro", true),
-        createPlayer("Alex Santana", 1, "Segundo-Volante", 2000000, 3, "Brasileiro", true),
-        createPlayer("Igor Coronado", 1, "Meia-Armador", 3000000, 3, "Brasileiro", true),
-        createPlayer("Talles Magno", 1, "Ponta-Direita", 3000000, 3, "Brasileiro", true),
-        createPlayer("Pedro Raul", 1, "Ponta-Esquerda", 2500000, 3, "Brasileiro", true),
-        createPlayer("Giovane", 1, "Centroavante", 3000000, 3, "Brasileiro", true),
-      ]
-    
-    case 2: // São Paulo
-      return [
-        createPlayer("Rafael", 2, "Goleiro", 8000000, 1, "Brasileiro"),
-        createPlayer("Arboleda", 2, "Zagueiro", 7000000, 2, "Colombiano"),
-        createPlayer("Alan Franco", 2, "Zagueiro", 6000000, 2, "Paraguaio"),
-        createPlayer("Rafinha", 2, "Lateral-Direito", 4000000, 2, "Brasileiro"),
-        createPlayer("Welington", 2, "Lateral-Esquerdo", 8000000, 1, "Brasileiro"),
-        createPlayer("Luiz Gustavo", 2, "Primeiro-Volante", 5000000, 2, "Brasileiro"),
-        createPlayer("Alisson", 2, "Segundo-Volante", 6000000, 2, "Brasileiro"),
-        createPlayer("Lucas Moura", 2, "Meia-Armador", 10000000, 1, "Brasileiro"),
-        createPlayer("Ferreirinha", 2, "Ponta-Direita", 9000000, 1, "Brasileiro"),
-        createPlayer("Luciano", 2, "Ponta-Esquerda", 8000000, 2, "Brasileiro"),
-        createPlayer("Calleri", 2, "Centroavante", 12000000, 1, "Argentino"),
-        // Reservas
-        createPlayer("Jandrei", 2, "Goleiro", 2500000, 3, "Brasileiro", true),
-        createPlayer("Diego Costa", 2, "Zagueiro", 3000000, 3, "Brasileiro", true),
-        createPlayer("Moreira", 2, "Lateral-Direito", 1500000, 3, "Brasileiro", true),
-        createPlayer("Patryck", 2, "Lateral-Esquerdo", 2000000, 3, "Brasileiro", true),
-        createPlayer("Pablo Maia", 2, "Primeiro-Volante", 4000000, 2, "Brasileiro", true),
-        createPlayer("Rodrigo Nestor", 2, "Segundo-Volante", 4000000, 2, "Brasileiro", true),
-        createPlayer("Michel Araújo", 2, "Meia-Armador", 3000000, 3, "Uruguaio", true),
-        createPlayer("Erick", 2, "Ponta-Direita", 2000000, 3, "Brasileiro", true),
-        createPlayer("Wellington Rato", 2, "Ponta-Esquerda", 3000000, 3, "Brasileiro", true),
-        createPlayer("André Silva", 2, "Centroavante", 3500000, 3, "Brasileiro", true),
-      ]
-    
-    case 3: // Santos
-      return [
-        createPlayer("Gabriel Brazão", 3, "Goleiro", 6000000, 2, "Brasileiro"),
-        createPlayer("Gil", 3, "Zagueiro", 3000000, 3, "Brasileiro"),
-        createPlayer("Jair", 3, "Zagueiro", 4000000, 2, "Brasileiro"),
-        createPlayer("JP Chermont", 3, "Lateral-Direito", 5000000, 2, "Brasileiro"),
-        createPlayer("Escobar", 3, "Lateral-Esquerdo", 4000000, 2, "Brasileiro"),
-        createPlayer("Diego Pituca", 3, "Primeiro-Volante", 5000000, 2, "Brasileiro"),
-        createPlayer("Tomás Rincón", 3, "Segundo-Volante", 3000000, 3, "Chileno"),
-        createPlayer("Giuliano", 3, "Meia-Armador", 4000000, 2, "Brasileiro"),
-        createPlayer("Otero", 3, "Ponta-Direita", 5000000, 2, "Colombiano"),
-        createPlayer("Pedrinho", 3, "Ponta-Esquerda", 6000000, 2, "Brasileiro"),
-        createPlayer("Wendel Silva", 3, "Centroavante", 4000000, 2, "Brasileiro"),
-        // Reservas
-        createPlayer("João Paulo", 3, "Goleiro", 2000000, 3, "Brasileiro", true),
-        createPlayer("Alex", 3, "Zagueiro", 1500000, 3, "Brasileiro", true),
-        createPlayer("Hayner", 3, "Lateral-Direito", 1500000, 3, "Brasileiro", true),
-        createPlayer("Kevyson", 3, "Lateral-Esquerdo", 1000000, 3, "Brasileiro", true),
-        createPlayer("Sandry", 3, "Primeiro-Volante", 2000000, 3, "Brasileiro", true),
-        createPlayer("Lucas Braga", 3, "Segundo-Volante", 1500000, 3, "Brasileiro", true),
-        createPlayer("Soteldo", 3, "Meia-Armador", 3000000, 2, "Chileno", true),
-        createPlayer("Lucas Barbosa", 3, "Ponta-Direita", 1500000, 3, "Brasileiro", true),
-        createPlayer("Ângelo", 3, "Ponta-Esquerda", 2500000, 3, "Brasileiro", true),
-        createPlayer("Furch", 3, "Centroavante", 2500000, 3, "Argentino", true),
-      ]
-    
-    case 4: // Palmeiras
-      return [
-        createPlayer("Weverton", 4, "Goleiro", 8000000, 1, "Brasileiro"),
-        createPlayer("Gustavo Gómez", 4, "Zagueiro", 12000000, 1, "Paraguaio"),
-        createPlayer("Murilo", 4, "Zagueiro", 10000000, 1, "Brasileiro"),
-        createPlayer("Mayke", 4, "Lateral-Direito", 5000000, 2, "Brasileiro"),
-        createPlayer("Piquerez", 4, "Lateral-Esquerdo", 10000000, 1, "Uruguaio"),
-        createPlayer("Zé Rafael", 4, "Primeiro-Volante", 8000000, 1, "Brasileiro"),
-        createPlayer("Richard Ríos", 4, "Segundo-Volante", 12000000, 1, "Colombiano"),
-        createPlayer("Raphael Veiga", 4, "Meia-Armador", 15000000, 1, "Brasileiro"),
-        createPlayer("Estêvão", 4, "Ponta-Direita", 40000000, 1, "Brasileiro"),
-        createPlayer("Dudu", 4, "Ponta-Esquerda", 8000000, 2, "Brasileiro"),
-        createPlayer("Endrick", 4, "Centroavante", 30000000, 1, "Brasileiro"),
-        // Reservas
-        createPlayer("Marcelo Lomba", 4, "Goleiro", 2000000, 3, "Brasileiro", true),
-        createPlayer("Luan", 4, "Zagueiro", 3000000, 3, "Brasileiro", true),
-        createPlayer("Marcos Rocha", 4, "Lateral-Direito", 2000000, 3, "Brasileiro", true),
-        createPlayer("Vanderlan", 4, "Lateral-Esquerdo", 3000000, 3, "Brasileiro", true),
-        createPlayer("Gabriel Menino", 4, "Primeiro-Volante", 6000000, 2, "Brasileiro", true),
-        createPlayer("Aníbal Moreno", 4, "Segundo-Volante", 5000000, 2, "Argentino", true),
-        createPlayer("Rômulo", 4, "Meia-Armador", 3000000, 3, "Brasileiro", true),
-        createPlayer("Lázaro", 4, "Ponta-Direita", 4000000, 3, "Brasileiro", true),
-        createPlayer("Artur", 4, "Ponta-Esquerda", 3000000, 3, "Brasileiro", true),
-        createPlayer("Flaco López", 4, "Centroavante", 8000000, 2, "Argentino", true),
-      ]
-    
-    case 5: // Flamengo
-      return [
-        createPlayer("Rossi", 5, "Goleiro", 6000000, 2, "Argentino"),
-        createPlayer("Fabrício Bruno", 5, "Zagueiro", 8000000, 2, "Brasileiro"),
-        createPlayer("Léo Ortiz", 5, "Zagueiro", 9000000, 1, "Brasileiro"),
-        createPlayer("Varela", 5, "Lateral-Direito", 6000000, 2, "Uruguaio"),
-        createPlayer("Ayrton Lucas", 5, "Lateral-Esquerdo", 7000000, 2, "Brasileiro"),
-        createPlayer("Gerson", 5, "Primeiro-Volante", 20000000, 1, "Brasileiro"),
-        createPlayer("Allan", 5, "Segundo-Volante", 5000000, 2, "Brasileiro"),
-        createPlayer("De Arrascaeta", 5, "Meia-Armador", 18000000, 1, "Uruguaio"),
-        createPlayer("John Arias", 5, "Ponta-Direita", 18000000, 1, "Colombiano"),
-        createPlayer("Everton Cebolinha", 5, "Ponta-Esquerda", 12000000, 1, "Brasileiro"),
-        createPlayer("Pedro", 5, "Centroavante", 25000000, 1, "Brasileiro"),
-        // Reservas
-        createPlayer("Matheus Cunha", 5, "Goleiro", 1500000, 3, "Brasileiro", true),
-        createPlayer("Cleiton", 5, "Zagueiro", 2000000, 3, "Brasileiro", true),
-        createPlayer("Wesley França", 5, "Lateral-Direito", 2000000, 3, "Brasileiro", true),
-        createPlayer("Viña", 5, "Lateral-Esquerdo", 4000000, 2, "Uruguaio", true),
-        createPlayer("Pulgar", 5, "Primeiro-Volante", 6000000, 2, "Chileno", true),
-        createPlayer("Victor Hugo", 5, "Segundo-Volante", 4000000, 2, "Brasileiro", true),
-        createPlayer("Everton Ribeiro", 5, "Meia-Armador", 5000000, 2, "Brasileiro", true),
-        createPlayer("Bruno Henrique", 5, "Ponta-Direita", 7000000, 2, "Brasileiro", true),
-        createPlayer("Michael", 5, "Ponta-Esquerda", 8000000, 2, "Brasileiro", true),
-        createPlayer("Gabigol", 5, "Centroavante", 10000000, 2, "Brasileiro", true),
-      ]
-    
-    case 6: // Vasco
-      return [
-        createPlayer("Léo Jardim", 6, "Goleiro", 5000000, 2, "Brasileiro"),
-        createPlayer("João Victor", 6, "Zagueiro", 6000000, 2, "Brasileiro"),
-        createPlayer("Maicon", 6, "Zagueiro", 3000000, 3, "Brasileiro"),
-        createPlayer("Paulo Henrique", 6, "Lateral-Direito", 4000000, 2, "Brasileiro"),
-        createPlayer("Lucas Piton", 6, "Lateral-Esquerdo", 5000000, 2, "Brasileiro"),
-        createPlayer("Sforza", 6, "Primeiro-Volante", 4000000, 2, "Argentino"),
-        createPlayer("Hugo Moura", 6, "Segundo-Volante", 3000000, 3, "Brasileiro"),
-        createPlayer("Dimitri Payet", 6, "Meia-Armador", 4000000, 2, "Português"),
-        createPlayer("Adson", 6, "Ponta-Direita", 5000000, 2, "Brasileiro"),
-        createPlayer("David", 6, "Ponta-Esquerda", 4000000, 2, "Brasileiro"),
-        createPlayer("Vegetti", 6, "Centroavante", 6000000, 2, "Argentino"),
-        // Reservas
-        createPlayer("Keiller", 6, "Goleiro", 1500000, 3, "Brasileiro", true),
-        createPlayer("Léo", 6, "Zagueiro", 2000000, 3, "Brasileiro", true),
-        createPlayer("Puma Rodríguez", 6, "Lateral-Direito", 3000000, 3, "Uruguaio", true),
-        createPlayer("Leandrinho", 6, "Lateral-Esquerdo", 1500000, 3, "Brasileiro", true),
-        createPlayer("Mateus Carvalho", 6, "Primeiro-Volante", 2500000, 3, "Brasileiro", true),
-        createPlayer("Galdames", 6, "Segundo-Volante", 2000000, 3, "Chileno", true),
-        createPlayer("Gary Medel", 6, "Meia-Armador", 2000000, 3, "Chileno", true),
-        createPlayer("Rossi", 6, "Ponta-Direita", 2000000, 3, "Brasileiro", true),
-        createPlayer("Clayton", 6, "Ponta-Esquerda", 1500000, 3, "Brasileiro", true),
-        createPlayer("GB", 6, "Centroavante", 2000000, 3, "Brasileiro", true),
-      ]
-    
-    case 7: // Internacional
-      return [
-        createPlayer("Rochet", 7, "Goleiro", 8000000, 1, "Uruguaio"),
-        createPlayer("Vitão", 7, "Zagueiro", 7000000, 2, "Brasileiro"),
-        createPlayer("Mercado", 7, "Zagueiro", 5000000, 2, "Argentino"),
-        createPlayer("Bustos", 7, "Lateral-Direito", 6000000, 2, "Argentino"),
-        createPlayer("Renê", 7, "Lateral-Esquerdo", 3000000, 3, "Brasileiro"),
-        createPlayer("Fernando", 7, "Primeiro-Volante", 4000000, 2, "Brasileiro"),
-        createPlayer("Bruno Henrique", 7, "Segundo-Volante", 3000000, 3, "Brasileiro"),
-        createPlayer("Alan Patrick", 7, "Meia-Armador", 8000000, 1, "Brasileiro"),
-        createPlayer("Wesley", 7, "Ponta-Direita", 12000000, 1, "Brasileiro"),
-        createPlayer("Wanderson", 7, "Ponta-Esquerda", 4000000, 2, "Brasileiro"),
-        createPlayer("Valencia", 7, "Centroavante", 6000000, 2, "Colombiano"),
-        // Reservas
-        createPlayer("Anthoni", 7, "Goleiro", 1500000, 3, "Brasileiro", true),
-        createPlayer("Robert Renan", 7, "Zagueiro", 3000000, 3, "Brasileiro", true),
-        createPlayer("Aguirre", 7, "Lateral-Direito", 2500000, 3, "Uruguaio", true),
-        createPlayer("Bernabei", 7, "Lateral-Esquerdo", 4000000, 2, "Argentino", true),
-        createPlayer("Rômulo", 7, "Primeiro-Volante", 2500000, 3, "Brasileiro", true),
-        createPlayer("Mauricio", 7, "Segundo-Volante", 3000000, 3, "Brasileiro", true),
-        createPlayer("Hyoran", 7, "Meia-Armador", 2500000, 3, "Brasileiro", true),
-        createPlayer("Gustavo Prado", 7, "Ponta-Direita", 3000000, 3, "Brasileiro", true),
-        createPlayer("Lucca", 7, "Ponta-Esquerda", 2000000, 3, "Brasileiro", true),
-        createPlayer("Borré", 7, "Centroavante", 8000000, 2, "Colombiano", true),
-      ]
-    
-    case 8: // Grêmio
-      return [
-        createPlayer("Marchesín", 8, "Goleiro", 5000000, 2, "Argentino"),
-        createPlayer("Geromel", 8, "Zagueiro", 3000000, 3, "Brasileiro"),
-        createPlayer("Kannemann", 8, "Zagueiro", 4000000, 2, "Argentino"),
-        createPlayer("João Pedro", 8, "Lateral-Direito", 5000000, 2, "Brasileiro"),
-        createPlayer("Reinaldo", 8, "Lateral-Esquerdo", 4000000, 2, "Brasileiro"),
-        createPlayer("Villasanti", 8, "Primeiro-Volante", 10000000, 1, "Paraguaio"),
-        createPlayer("Pepê", 8, "Segundo-Volante", 6000000, 2, "Brasileiro"),
-        createPlayer("Cristaldo", 8, "Meia-Armador", 7000000, 2, "Argentino"),
-        createPlayer("Pavon", 8, "Ponta-Direita", 8000000, 2, "Argentino"),
-        createPlayer("Nathan", 8, "Ponta-Esquerda", 5000000, 2, "Brasileiro"),
-        createPlayer("Diego Costa", 8, "Centroavante", 6000000, 2, "Brasileiro"),
-        // Reservas
-        createPlayer("Gabriel Grando", 8, "Goleiro", 1500000, 3, "Brasileiro", true),
-        createPlayer("Rodrigo Ely", 8, "Zagueiro", 2000000, 3, "Brasileiro", true),
-        createPlayer("Fábio", 8, "Lateral-Direito", 1500000, 3, "Brasileiro", true),
-        createPlayer("Mayk", 8, "Lateral-Esquerdo", 1500000, 3, "Brasileiro", true),
-        createPlayer("Du Queiroz", 8, "Primeiro-Volante", 3000000, 3, "Brasileiro", true),
-        createPlayer("Edenilson", 8, "Segundo-Volante", 2500000, 3, "Brasileiro", true),
-        createPlayer("Carballo", 8, "Meia-Armador", 3000000, 3, "Uruguaio", true),
-        createPlayer("Everton Galdino", 8, "Ponta-Direita", 2500000, 3, "Brasileiro", true),
-        createPlayer("Soteldo", 8, "Ponta-Esquerda", 4000000, 2, "Chileno", true),
-        createPlayer("André", 8, "Centroavante", 2500000, 3, "Brasileiro", true),
-      ]
-    
-    case 9: // Atlético-MG
-      return [
-        createPlayer("Everson", 9, "Goleiro", 7000000, 2, "Brasileiro"),
-        createPlayer("Jemerson", 9, "Zagueiro", 4000000, 2, "Brasileiro"),
-        createPlayer("Battaglia", 9, "Zagueiro", 5000000, 2, "Argentino"),
-        createPlayer("Saravia", 9, "Lateral-Direito", 4000000, 2, "Argentino"),
-        createPlayer("Guilherme Arana", 9, "Lateral-Esquerdo", 12000000, 1, "Brasileiro"),
-        createPlayer("Otávio", 9, "Primeiro-Volante", 8000000, 1, "Brasileiro"),
-        createPlayer("Alan Franco", 9, "Segundo-Volante", 5000000, 2, "Paraguaio"),
-        createPlayer("Gustavo Scarpa", 9, "Meia-Armador", 8000000, 1, "Brasileiro"),
-        createPlayer("Paulinho", 9, "Ponta-Direita", 15000000, 1, "Brasileiro"),
-        createPlayer("Hulk", 9, "Ponta-Esquerda", 10000000, 1, "Brasileiro"),
-        createPlayer("Eduardo Vargas", 9, "Centroavante", 5000000, 2, "Chileno"),
-        // Reservas
-        createPlayer("Matheus Mendes", 9, "Goleiro", 1500000, 3, "Brasileiro", true),
-        createPlayer("Rômulo", 9, "Zagueiro", 2000000, 3, "Brasileiro", true),
-        createPlayer("Mariano", 9, "Lateral-Direito", 2000000, 3, "Brasileiro", true),
-        createPlayer("Rubens", 9, "Lateral-Esquerdo", 3000000, 3, "Brasileiro", true),
-        createPlayer("Igor Gomes", 9, "Primeiro-Volante", 4000000, 2, "Brasileiro", true),
-        createPlayer("Fausto Vera", 9, "Segundo-Volante", 5000000, 2, "Argentino", true),
-        createPlayer("Matías Zaracho", 9, "Meia-Armador", 6000000, 2, "Argentino", true),
-        createPlayer("Alisson", 9, "Ponta-Direita", 3000000, 3, "Brasileiro", true),
-        createPlayer("Pedrinho", 9, "Ponta-Esquerda", 4000000, 3, "Brasileiro", true),
-        createPlayer("Alan Kardec", 9, "Centroavante", 2500000, 3, "Brasileiro", true),
-      ]
-    
-    case 10: // Cruzeiro
-      return [
-        createPlayer("Cássio", 10, "Goleiro", 3000000, 3, "Brasileiro"),
-        createPlayer("Zé Ivaldo", 10, "Zagueiro", 4000000, 2, "Brasileiro"),
-        createPlayer("João Marcelo", 10, "Zagueiro", 3000000, 3, "Brasileiro"),
-        createPlayer("William", 10, "Lateral-Direito", 4000000, 2, "Brasileiro"),
-        createPlayer("Marlon", 10, "Lateral-Esquerdo", 3000000, 3, "Brasileiro"),
-        createPlayer("Lucas Romero", 10, "Primeiro-Volante", 5000000, 2, "Argentino"),
-        createPlayer("Matheus Henrique", 10, "Segundo-Volante", 6000000, 2, "Brasileiro"),
-        createPlayer("Matheus Pereira", 10, "Meia-Armador", 10000000, 1, "Brasileiro"),
-        createPlayer("Gabriel Verón", 10, "Ponta-Direita", 6000000, 2, "Brasileiro"),
-        createPlayer("Álvaro Barreal", 10, "Ponta-Esquerda", 5000000, 2, "Argentino"),
-        createPlayer("Juan Dinenno", 10, "Centroavante", 7000000, 2, "Argentino"),
-        // Reservas
-        createPlayer("Anderson", 10, "Goleiro", 1000000, 3, "Brasileiro", true),
-        createPlayer("Neris", 10, "Zagueiro", 2000000, 3, "Brasileiro", true),
-        createPlayer("Wesley Gasolina", 10, "Lateral-Direito", 2500000, 3, "Brasileiro", true),
-        createPlayer("Kaiki Bruno", 10, "Lateral-Esquerdo", 1500000, 3, "Brasileiro", true),
-        createPlayer("Walace", 10, "Primeiro-Volante", 3000000, 3, "Brasileiro", true),
-        createPlayer("Ramiro", 10, "Segundo-Volante", 2500000, 3, "Brasileiro", true),
-        createPlayer("Vitinho", 10, "Meia-Armador", 2000000, 3, "Brasileiro", true),
-        createPlayer("Arthur Gomes", 10, "Ponta-Direita", 2500000, 3, "Brasileiro", true),
-        createPlayer("Lautaro Díaz", 10, "Ponta-Esquerda", 3000000, 3, "Argentino", true),
-        createPlayer("Rafa Silva", 10, "Centroavante", 3000000, 3, "Brasileiro", true),
-      ]
-    
-    default:
-      return []
+    // ── 1: CORINTHIANS ───────────────────────────────────────────────────
+    case 1: return [
+      p("Hugo Souza",        1, "Goleiro",           10_000_000, 1, "veterano", "Brasileiro"),
+      p("Félix Torres",      1, "Zaga-1",             8_000_000, 1, "veterano", "Colombiano"),
+      p("Cacá",              1, "Zaga-2",             5_000_000, 2, "joia",     "Brasileiro"),
+      p("Matheuzinho",       1, "Lateral-Direito",    6_000_000, 2, "joia",     "Brasileiro"),
+      p("Hugo Corinthians",  1, "Lateral-Esquerdo",   4_000_000, 2, "joia",     "Brasileiro"),
+      p("Raniele",           1, "Primeiro-Volante",   7_000_000, 2, "joia",     "Brasileiro"),
+      p("Breno Bidon",       1, "Segundo-Volante",    5_000_000, 2, "joia",     "Brasileiro"),
+      p("Rodrigo Garro",     1, "Meia-Armador",      12_000_000, 1, "veterano", "Argentino"),
+      p("Wesley COR",        1, "Ponta-Direita",      8_000_000, 2, "joia",     "Brasileiro"),
+      p("Romero",            1, "Ponta-Esquerdo",     6_000_000, 2, "joia",     "Paraguaio"),
+      p("Yuri Alberto",      1, "Centroavante",      15_000_000, 1, "veterano", "Brasileiro"),
+      // Reservas
+      p("Matheus Donelli",   1, "Goleiro",            2_000_000, 3, "operario", "Brasileiro", true),
+      p("Raul Gustavo",      1, "Zaga-1",             2_000_000, 3, "operario", "Brasileiro", true),
+      p("Léo Mana COR",      1, "Zaga-2",             2_000_000, 3, "operario", "Brasileiro", true),
+      p("Igor Coronado",     1, "Lateral-Direito",    3_000_000, 3, "operario", "Brasileiro", true),
+      p("Diego Palacios",    1, "Lateral-Esquerdo",   2_000_000, 3, "operario", "Colombiano", true),
+      p("Ryan COR",          1, "Primeiro-Volante",   1_500_000, 3, "operario", "Brasileiro", true),
+      p("Alex Santana",      1, "Segundo-Volante",    2_000_000, 3, "operario", "Brasileiro", true),
+      p("Talles Magno",      1, "Meia-Armador",       3_000_000, 3, "operario", "Brasileiro", true),
+      p("Pedro Raul COR",    1, "Ponta-Direita",      2_500_000, 3, "operario", "Brasileiro", true),
+      p("Giovane",           1, "Ponta-Esquerdo",     3_000_000, 3, "operario", "Brasileiro", true),
+      p("Guilherme Biro COR",1, "Centroavante",       2_000_000, 3, "operario", "Brasileiro", true),
+    ]
+
+    // ── 2: SÃO PAULO ─────────────────────────────────────────────────────
+    case 2: return [
+      p("Rafael",            2, "Goleiro",            8_000_000, 1, "veterano", "Brasileiro"),
+      p("Arboleda",          2, "Zaga-1",             7_000_000, 2, "joia",     "Colombiano"),
+      p("Alan Franco SAO",   2, "Zaga-2",             6_000_000, 2, "joia",     "Paraguaio"),
+      p("Rafinha SAO",       2, "Lateral-Direito",    4_000_000, 2, "joia",     "Brasileiro"),
+      p("Welington",         2, "Lateral-Esquerdo",   8_000_000, 1, "veterano", "Brasileiro"),
+      p("Luiz Gustavo",      2, "Primeiro-Volante",   5_000_000, 2, "joia",     "Brasileiro"),
+      p("Alisson SAO",       2, "Segundo-Volante",    6_000_000, 2, "joia",     "Brasileiro"),
+      p("Lucas Moura",       2, "Meia-Armador",      10_000_000, 1, "veterano", "Brasileiro"),
+      p("Ferreirinha",       2, "Ponta-Direita",      9_000_000, 1, "veterano", "Brasileiro"),
+      p("Luciano",           2, "Ponta-Esquerdo",     8_000_000, 2, "joia",     "Brasileiro"),
+      p("Calleri",           2, "Centroavante",      12_000_000, 1, "veterano", "Argentino"),
+      // Reservas
+      p("Jandrei",           2, "Goleiro",            2_500_000, 3, "operario", "Brasileiro", true),
+      p("Diego Costa SAO",   2, "Zaga-1",             3_000_000, 3, "operario", "Brasileiro", true),
+      p("Moreira SAO",       2, "Zaga-2",             1_500_000, 3, "operario", "Brasileiro", true),
+      p("Moreira LD",        2, "Lateral-Direito",    1_500_000, 3, "operario", "Brasileiro", true),
+      p("Patryck",           2, "Lateral-Esquerdo",   2_000_000, 3, "operario", "Brasileiro", true),
+      p("Pablo Maia SAO",    2, "Primeiro-Volante",   4_000_000, 2, "joia",     "Brasileiro", true),
+      p("Nestor",            2, "Segundo-Volante",    4_000_000, 2, "joia",     "Brasileiro", true),
+      p("Michel Araújo SAO", 2, "Meia-Armador",       3_000_000, 3, "operario", "Uruguaio",   true),
+      p("Erick SAO",         2, "Ponta-Direita",      2_000_000, 3, "operario", "Brasileiro", true),
+      p("Wellington Rato",   2, "Ponta-Esquerdo",     3_000_000, 3, "operario", "Brasileiro", true),
+      p("André Silva SAO",   2, "Centroavante",       3_500_000, 3, "operario", "Brasileiro", true),
+    ]
+
+    // ── 3: SANTOS ────────────────────────────────────────────────────────
+    case 3: return [
+      p("Gabriel Brazão",    3, "Goleiro",            6_000_000, 2, "joia",     "Brasileiro"),
+      p("Gil",               3, "Zaga-1",             3_000_000, 3, "operario", "Brasileiro"),
+      p("Jair",              3, "Zaga-2",             4_000_000, 2, "joia",     "Brasileiro"),
+      p("JP Chermont",       3, "Lateral-Direito",    5_000_000, 2, "joia",     "Brasileiro"),
+      p("Escobar",           3, "Lateral-Esquerdo",   4_000_000, 2, "joia",     "Colombiano"),
+      p("Diego Pituca",      3, "Primeiro-Volante",   5_000_000, 2, "joia",     "Brasileiro"),
+      p("Giuliano",          3, "Segundo-Volante",    4_000_000, 2, "joia",     "Brasileiro"),
+      p("Otero",             3, "Meia-Armador",       5_000_000, 2, "joia",     "Colombiano"),
+      p("Pedrinho SAN",      3, "Ponta-Direita",      6_000_000, 2, "joia",     "Brasileiro"),
+      p("Lucas Braga",       3, "Ponta-Esquerdo",     5_000_000, 2, "joia",     "Brasileiro"),
+      p("Wendel Silva",      3, "Centroavante",       4_000_000, 2, "joia",     "Brasileiro"),
+      // Reservas
+      p("João Paulo SAN",    3, "Goleiro",            2_000_000, 3, "operario", "Brasileiro", true),
+      p("Alex SAN",          3, "Zaga-1",             1_500_000, 3, "operario", "Brasileiro", true),
+      p("Rodrigo SAN",       3, "Zaga-2",             1_500_000, 3, "operario", "Brasileiro", true),
+      p("Hayner",            3, "Lateral-Direito",    1_500_000, 3, "operario", "Brasileiro", true),
+      p("Kevyson",           3, "Lateral-Esquerdo",   1_000_000, 3, "operario", "Brasileiro", true),
+      p("Sandry",            3, "Primeiro-Volante",   2_000_000, 3, "operario", "Brasileiro", true),
+      p("Soteldo",           3, "Segundo-Volante",    3_000_000, 2, "joia",     "Chileno",    true),
+      p("Tomás Rincón",      3, "Meia-Armador",       3_000_000, 3, "operario", "Chileno",    true),
+      p("Lucas Barbosa",     3, "Ponta-Direita",      1_500_000, 3, "operario", "Brasileiro", true),
+      p("Ângelo",            3, "Ponta-Esquerdo",     2_500_000, 3, "operario", "Brasileiro", true),
+      p("Furch SAN",         3, "Centroavante",       2_500_000, 3, "operario", "Argentino",  true),
+    ]
+
+    // ── 4: PALMEIRAS ─────────────────────────────────────────────────────
+    case 4: return [
+      p("Weverton",          4, "Goleiro",            8_000_000, 1, "veterano", "Brasileiro"),
+      p("Gustavo Gómez",     4, "Zaga-1",            12_000_000, 1, "veterano", "Paraguaio"),
+      p("Murilo PAL",        4, "Zaga-2",            10_000_000, 1, "veterano", "Brasileiro"),
+      p("Mayke",             4, "Lateral-Direito",    5_000_000, 2, "joia",     "Brasileiro"),
+      p("Piquerez",          4, "Lateral-Esquerdo",  10_000_000, 1, "veterano", "Uruguaio"),
+      p("Zé Rafael",         4, "Primeiro-Volante",   8_000_000, 1, "veterano", "Brasileiro"),
+      p("Richard Ríos PAL",  4, "Segundo-Volante",   12_000_000, 1, "veterano", "Colombiano"),
+      p("Raphael Veiga",     4, "Meia-Armador",      15_000_000, 1, "veterano", "Brasileiro"),
+      p("Estêvão",           4, "Ponta-Direita",     40_000_000, 1, "veterano", "Brasileiro"),
+      p("Dudu",              4, "Ponta-Esquerdo",     8_000_000, 2, "joia",     "Brasileiro"),
+      p("Endrick",           4, "Centroavante",      30_000_000, 1, "veterano", "Brasileiro"),
+      // Reservas
+      p("Marcelo Lomba",     4, "Goleiro",            2_000_000, 3, "operario", "Brasileiro", true),
+      p("Luan PAL",          4, "Zaga-1",             3_000_000, 3, "operario", "Brasileiro", true),
+      p("Vitor Reis",        4, "Zaga-2",             4_000_000, 2, "joia",     "Brasileiro", true),
+      p("Marcos Rocha",      4, "Lateral-Direito",    2_000_000, 3, "operario", "Brasileiro", true),
+      p("Vanderlan",         4, "Lateral-Esquerdo",   3_000_000, 3, "operario", "Brasileiro", true),
+      p("Gabriel Menino",    4, "Primeiro-Volante",   6_000_000, 2, "joia",     "Brasileiro", true),
+      p("Aníbal Moreno",     4, "Segundo-Volante",    5_000_000, 2, "joia",     "Argentino",  true),
+      p("Rômulo PAL",        4, "Meia-Armador",       3_000_000, 3, "operario", "Brasileiro", true),
+      p("Lázaro PAL",        4, "Ponta-Direita",      4_000_000, 3, "operario", "Brasileiro", true),
+      p("Artur PAL",         4, "Ponta-Esquerdo",     3_000_000, 3, "operario", "Brasileiro", true),
+      p("Flaco López",       4, "Centroavante",       8_000_000, 2, "joia",     "Argentino",  true),
+    ]
+
+    // ── 5: FLAMENGO ──────────────────────────────────────────────────────
+    case 5: return [
+      p("Rossi FLA",         5, "Goleiro",            6_000_000, 2, "joia",     "Argentino"),
+      p("Fabrício Bruno",    5, "Zaga-1",             8_000_000, 2, "joia",     "Brasileiro"),
+      p("Léo Ortiz",         5, "Zaga-2",             9_000_000, 1, "veterano", "Brasileiro"),
+      p("Varela",            5, "Lateral-Direito",    6_000_000, 2, "joia",     "Uruguaio"),
+      p("Ayrton Lucas",      5, "Lateral-Esquerdo",   7_000_000, 2, "joia",     "Brasileiro"),
+      p("Gerson",            5, "Primeiro-Volante",  20_000_000, 1, "veterano", "Brasileiro"),
+      p("Allan FLA",         5, "Segundo-Volante",    5_000_000, 2, "joia",     "Brasileiro"),
+      p("De Arrascaeta",     5, "Meia-Armador",      18_000_000, 1, "veterano", "Uruguaio"),
+      p("John Arias FLA",    5, "Ponta-Direita",     18_000_000, 1, "veterano", "Colombiano"),
+      p("Everton Cebolinha", 5, "Ponta-Esquerdo",    12_000_000, 1, "veterano", "Brasileiro"),
+      p("Pedro FLA",         5, "Centroavante",      25_000_000, 1, "veterano", "Brasileiro"),
+      // Reservas
+      p("Dyogo Alves",       5, "Goleiro",            1_500_000, 3, "operario", "Brasileiro", true),
+      p("Cleiton FLA",       5, "Zaga-1",             2_000_000, 3, "operario", "Brasileiro", true),
+      p("David Luiz",        5, "Zaga-2",             3_000_000, 3, "operario", "Brasileiro", true),
+      p("Wesley França",     5, "Lateral-Direito",    2_000_000, 3, "operario", "Brasileiro", true),
+      p("Viña",              5, "Lateral-Esquerdo",   4_000_000, 2, "joia",     "Uruguaio",   true),
+      p("Pulgar",            5, "Primeiro-Volante",   6_000_000, 2, "joia",     "Chileno",    true),
+      p("Victor Hugo FLA",   5, "Segundo-Volante",    4_000_000, 2, "joia",     "Brasileiro", true),
+      p("Everton Ribeiro",   5, "Meia-Armador",       5_000_000, 2, "joia",     "Brasileiro", true),
+      p("Bruno Henrique FLA",5, "Ponta-Direita",      7_000_000, 2, "joia",     "Brasileiro", true),
+      p("Michael FLA",       5, "Ponta-Esquerdo",     8_000_000, 2, "joia",     "Brasileiro", true),
+      p("Gabigol",           5, "Centroavante",      10_000_000, 2, "joia",     "Brasileiro", true),
+    ]
+
+    // ── 6: VASCO ─────────────────────────────────────────────────────────
+    case 6: return [
+      p("Léo Jardim",        6, "Goleiro",            5_000_000, 2, "joia",     "Brasileiro"),
+      p("João Victor",       6, "Zaga-1",             6_000_000, 2, "joia",     "Brasileiro"),
+      p("Maicon",            6, "Zaga-2",             3_000_000, 3, "operario", "Brasileiro"),
+      p("Paulo Henrique",    6, "Lateral-Direito",    4_000_000, 2, "joia",     "Brasileiro"),
+      p("Lucas Piton",       6, "Lateral-Esquerdo",   5_000_000, 2, "joia",     "Brasileiro"),
+      p("Sforza",            6, "Primeiro-Volante",   4_000_000, 2, "joia",     "Argentino"),
+      p("Hugo Moura",        6, "Segundo-Volante",    3_000_000, 3, "operario", "Brasileiro"),
+      p("Dimitri Payet",     6, "Meia-Armador",       4_000_000, 2, "joia",     "Português"),
+      p("Adson",             6, "Ponta-Direita",      5_000_000, 2, "joia",     "Brasileiro"),
+      p("David VAS",         6, "Ponta-Esquerdo",     4_000_000, 2, "joia",     "Brasileiro"),
+      p("Vegetti",           6, "Centroavante",       6_000_000, 2, "joia",     "Argentino"),
+      // Reservas
+      p("Keiller",           6, "Goleiro",            1_500_000, 3, "operario", "Brasileiro", true),
+      p("Léo VAS",           6, "Zaga-1",             2_000_000, 3, "operario", "Brasileiro", true),
+      p("Danilo VAS",        6, "Zaga-2",             2_000_000, 3, "operario", "Brasileiro", true),
+      p("Puma Rodríguez",    6, "Lateral-Direito",    3_000_000, 3, "operario", "Uruguaio",   true),
+      p("Leandrinho",        6, "Lateral-Esquerdo",   1_500_000, 3, "operario", "Brasileiro", true),
+      p("Mateus Carvalho",   6, "Primeiro-Volante",   2_500_000, 3, "operario", "Brasileiro", true),
+      p("Galdames VAS",      6, "Segundo-Volante",    2_000_000, 3, "operario", "Chileno",    true),
+      p("Gary Medel",        6, "Meia-Armador",       2_000_000, 3, "operario", "Chileno",    true),
+      p("Rossi VAS",         6, "Ponta-Direita",      2_000_000, 3, "operario", "Brasileiro", true),
+      p("Clayton",           6, "Ponta-Esquerdo",     1_500_000, 3, "operario", "Brasileiro", true),
+      p("GB",                6, "Centroavante",       2_000_000, 3, "operario", "Brasileiro", true),
+    ]
+
+    // ── 7: INTERNACIONAL ─────────────────────────────────────────────────
+    case 7: return [
+      p("Rochet",            7, "Goleiro",            8_000_000, 1, "veterano", "Uruguaio"),
+      p("Vitão",             7, "Zaga-1",             7_000_000, 2, "joia",     "Brasileiro"),
+      p("Mercado",           7, "Zaga-2",             5_000_000, 2, "joia",     "Argentino"),
+      p("Bustos",            7, "Lateral-Direito",    6_000_000, 2, "joia",     "Argentino"),
+      p("Renê",              7, "Lateral-Esquerdo",   3_000_000, 3, "operario", "Brasileiro"),
+      p("Fernando INT",      7, "Primeiro-Volante",   4_000_000, 2, "joia",     "Brasileiro"),
+      p("Bruno Gomes",       7, "Segundo-Volante",    3_000_000, 3, "operario", "Brasileiro"),
+      p("Alan Patrick",      7, "Meia-Armador",       8_000_000, 1, "veterano", "Brasileiro"),
+      p("Wesley INT",        7, "Ponta-Direita",     12_000_000, 1, "veterano", "Brasileiro"),
+      p("Wanderson",         7, "Ponta-Esquerdo",     4_000_000, 2, "joia",     "Brasileiro"),
+      p("Valencia",          7, "Centroavante",       6_000_000, 2, "joia",     "Colombiano"),
+      // Reservas
+      p("Anthoni",           7, "Goleiro",            1_500_000, 3, "operario", "Brasileiro", true),
+      p("Robert Renan",      7, "Zaga-1",             3_000_000, 3, "operario", "Brasileiro", true),
+      p("Igor INT",          7, "Zaga-2",             2_000_000, 3, "operario", "Brasileiro", true),
+      p("Aguirre",           7, "Lateral-Direito",    2_500_000, 3, "operario", "Uruguaio",   true),
+      p("Bernabei",          7, "Lateral-Esquerdo",   4_000_000, 2, "joia",     "Argentino",  true),
+      p("Rômulo INT",        7, "Primeiro-Volante",   2_500_000, 3, "operario", "Brasileiro", true),
+      p("Mauricio INT",      7, "Segundo-Volante",    3_000_000, 3, "operario", "Brasileiro", true),
+      p("Hyoran INT",        7, "Meia-Armador",       2_500_000, 3, "operario", "Brasileiro", true),
+      p("Gustavo Prado",     7, "Ponta-Direita",      3_000_000, 3, "operario", "Brasileiro", true),
+      p("Lucca INT",         7, "Ponta-Esquerdo",     2_000_000, 3, "operario", "Brasileiro", true),
+      p("Borré",             7, "Centroavante",       8_000_000, 2, "joia",     "Colombiano", true),
+    ]
+
+    // ── 8: GRÊMIO ────────────────────────────────────────────────────────
+    case 8: return [
+      p("Marchesín",         8, "Goleiro",            5_000_000, 2, "joia",     "Argentino"),
+      p("Geromel",           8, "Zaga-1",             3_000_000, 3, "operario", "Brasileiro"),
+      p("Kannemann",         8, "Zaga-2",             4_000_000, 2, "joia",     "Argentino"),
+      p("João Pedro GRE",    8, "Lateral-Direito",    5_000_000, 2, "joia",     "Brasileiro"),
+      p("Reinaldo",          8, "Lateral-Esquerdo",   4_000_000, 2, "joia",     "Brasileiro"),
+      p("Villasanti",        8, "Primeiro-Volante",  10_000_000, 1, "veterano", "Paraguaio"),
+      p("Pepê GRE",          8, "Segundo-Volante",    6_000_000, 2, "joia",     "Brasileiro"),
+      p("Cristaldo",         8, "Meia-Armador",       7_000_000, 2, "joia",     "Argentino"),
+      p("Pavon",             8, "Ponta-Direita",      8_000_000, 2, "joia",     "Argentino"),
+      p("Nathan GRE",        8, "Ponta-Esquerdo",     5_000_000, 2, "joia",     "Brasileiro"),
+      p("Diego Costa GRE",   8, "Centroavante",       6_000_000, 2, "joia",     "Brasileiro"),
+      // Reservas
+      p("Gabriel Grando",    8, "Goleiro",            1_500_000, 3, "operario", "Brasileiro", true),
+      p("Rodrigo Ely",       8, "Zaga-1",             2_000_000, 3, "operario", "Brasileiro", true),
+      p("Gustavo Martins",   8, "Zaga-2",             2_000_000, 3, "operario", "Brasileiro", true),
+      p("Fábio GRE",         8, "Lateral-Direito",    1_500_000, 3, "operario", "Brasileiro", true),
+      p("Mayk",              8, "Lateral-Esquerdo",   1_500_000, 3, "operario", "Brasileiro", true),
+      p("Du Queiroz",        8, "Primeiro-Volante",   3_000_000, 3, "operario", "Brasileiro", true),
+      p("Edenilson GRE",     8, "Segundo-Volante",    2_500_000, 3, "operario", "Brasileiro", true),
+      p("Carballo",          8, "Meia-Armador",       3_000_000, 3, "operario", "Uruguaio",   true),
+      p("Everton Galdino GRE",8,"Ponta-Direita",      2_500_000, 3, "operario", "Brasileiro", true),
+      p("Soteldo GRE",       8, "Ponta-Esquerdo",     4_000_000, 2, "joia",     "Chileno",    true),
+      p("André GRE",         8, "Centroavante",       2_500_000, 3, "operario", "Brasileiro", true),
+    ]
+
+    // ── 9: ATLÉTICO-MG ───────────────────────────────────────────────────
+    case 9: return [
+      p("Everson",           9, "Goleiro",            7_000_000, 2, "joia",     "Brasileiro"),
+      p("Jemerson",          9, "Zaga-1",             4_000_000, 2, "joia",     "Brasileiro"),
+      p("Battaglia",         9, "Zaga-2",             5_000_000, 2, "joia",     "Argentino"),
+      p("Saravia",           9, "Lateral-Direito",    4_000_000, 2, "joia",     "Argentino"),
+      p("Guilherme Arana CAM",9,"Lateral-Esquerdo",  12_000_000, 1, "veterano", "Brasileiro"),
+      p("Otávio",            9, "Primeiro-Volante",   8_000_000, 1, "veterano", "Brasileiro"),
+      p("Alan Franco CAM",   9, "Segundo-Volante",    5_000_000, 2, "joia",     "Paraguaio"),
+      p("Gustavo Scarpa CAM",9, "Meia-Armador",       8_000_000, 1, "veterano", "Brasileiro"),
+      p("Paulinho CAM",      9, "Ponta-Direita",     15_000_000, 1, "veterano", "Brasileiro"),
+      p("Hulk",              9, "Ponta-Esquerdo",    10_000_000, 1, "veterano", "Brasileiro"),
+      p("Eduardo Vargas",    9, "Centroavante",       5_000_000, 2, "joia",     "Chileno"),
+      // Reservas
+      p("Matheus Mendes",    9, "Goleiro",            1_500_000, 3, "operario", "Brasileiro", true),
+      p("Rômulo CAM",        9, "Zaga-1",             2_000_000, 3, "operario", "Brasileiro", true),
+      p("Igor Rabello",      9, "Zaga-2",             3_000_000, 3, "operario", "Brasileiro", true),
+      p("Mariano",           9, "Lateral-Direito",    2_000_000, 3, "operario", "Brasileiro", true),
+      p("Rubens",            9, "Lateral-Esquerdo",   3_000_000, 3, "operario", "Brasileiro", true),
+      p("Igor Gomes CAM",    9, "Primeiro-Volante",   4_000_000, 2, "joia",     "Brasileiro", true),
+      p("Fausto Vera",       9, "Segundo-Volante",    5_000_000, 2, "joia",     "Argentino",  true),
+      p("Matías Zaracho CAM",9, "Meia-Armador",       6_000_000, 2, "joia",     "Argentino",  true),
+      p("Alisson CAM",       9, "Ponta-Direita",      3_000_000, 3, "operario", "Brasileiro", true),
+      p("Pedrinho CAM",      9, "Ponta-Esquerdo",     4_000_000, 3, "operario", "Brasileiro", true),
+      p("Alan Kardec CAM",   9, "Centroavante",       2_500_000, 3, "operario", "Brasileiro", true),
+    ]
+
+    // ── 10: CRUZEIRO ─────────────────────────────────────────────────────
+    case 10: return [
+      p("Cássio",           10, "Goleiro",            3_000_000, 3, "operario", "Brasileiro"),
+      p("Zé Ivaldo",        10, "Zaga-1",             4_000_000, 2, "joia",     "Brasileiro"),
+      p("João Marcelo",     10, "Zaga-2",             3_000_000, 3, "operario", "Brasileiro"),
+      p("William",          10, "Lateral-Direito",    4_000_000, 2, "joia",     "Brasileiro"),
+      p("Marlon",           10, "Lateral-Esquerdo",   3_000_000, 3, "operario", "Brasileiro"),
+      p("Lucas Romero",     10, "Primeiro-Volante",   5_000_000, 2, "joia",     "Argentino"),
+      p("Matheus Henrique", 10, "Segundo-Volante",    6_000_000, 2, "joia",     "Brasileiro"),
+      p("Matheus Pereira",  10, "Meia-Armador",      10_000_000, 1, "veterano", "Brasileiro"),
+      p("Gabriel Verón",    10, "Ponta-Direita",      6_000_000, 2, "joia",     "Brasileiro"),
+      p("Barreal",          10, "Ponta-Esquerdo",     5_000_000, 2, "joia",     "Argentino"),
+      p("Dinenno",          10, "Centroavante",       7_000_000, 2, "joia",     "Argentino"),
+      // Reservas
+      p("Anderson CRU",     10, "Goleiro",            1_000_000, 3, "operario", "Brasileiro", true),
+      p("Neris",            10, "Zaga-1",             2_000_000, 3, "operario", "Brasileiro", true),
+      p("Villalba",         10, "Zaga-2",             2_000_000, 3, "operario", "Argentino",  true),
+      p("Wesley Gasolina",  10, "Lateral-Direito",    2_500_000, 3, "operario", "Brasileiro", true),
+      p("Kaiki Bruno",      10, "Lateral-Esquerdo",   1_500_000, 3, "operario", "Brasileiro", true),
+      p("Walace CRU",       10, "Primeiro-Volante",   3_000_000, 3, "operario", "Brasileiro", true),
+      p("Ramiro CRU",       10, "Segundo-Volante",    2_500_000, 3, "operario", "Brasileiro", true),
+      p("Vitinho CRU",      10, "Meia-Armador",       2_000_000, 3, "operario", "Brasileiro", true),
+      p("Arthur Gomes CRU", 10, "Ponta-Direita",      2_500_000, 3, "operario", "Brasileiro", true),
+      p("Lautaro Díaz",     10, "Ponta-Esquerdo",     3_000_000, 3, "operario", "Argentino",  true),
+      p("Rafa Silva CRU",   10, "Centroavante",       3_000_000, 3, "operario", "Brasileiro", true),
+    ]
+
+    default: return []
   }
-}
-
-// European Transfer Options (15M-25M value range)
-export const EUROPEAN_TRANSFER_OPTIONS: Omit<Player, "id" | "teamId">[] = [
-  // Tier 1 - European stars (20-25M)
-  { name: "Dani Olmo", position: "Meia-Armador", value: 25000000, tier: 1, nationality: "Espanhol", isReserva: false },
-  { name: "Fabian Ruiz", position: "Segundo-Volante", value: 22000000, tier: 1, nationality: "Espanhol", isReserva: false },
-  { name: "Nico Williams", position: "Ponta-Esquerda", value: 25000000, tier: 1, nationality: "Espanhol", isReserva: false },
-  { name: "Rodrigo Bentancur", position: "Primeiro-Volante", value: 20000000, tier: 1, nationality: "Uruguaio", isReserva: false },
-  { name: "Julián Álvarez", position: "Centroavante", value: 25000000, tier: 1, nationality: "Argentino", isReserva: false },
-  
-  // Tier 2 - Solid Europeans (15-20M)
-  { name: "Vitinha", position: "Meia-Armador", value: 18000000, tier: 2, nationality: "Português", isReserva: false },
-  { name: "Gonçalo Ramos", position: "Centroavante", value: 20000000, tier: 2, nationality: "Português", isReserva: false },
-  { name: "Bryan Gil", position: "Ponta-Direita", value: 15000000, tier: 2, nationality: "Espanhol", isReserva: false },
-  { name: "Alex Grimaldo", position: "Lateral-Esquerdo", value: 18000000, tier: 2, nationality: "Espanhol", isReserva: false },
-  { name: "Diogo Costa", position: "Goleiro", value: 20000000, tier: 2, nationality: "Português", isReserva: false },
-  { name: "Gonçalo Inácio", position: "Zagueiro", value: 18000000, tier: 2, nationality: "Português", isReserva: false },
-  { name: "Nélson Semedo", position: "Lateral-Direito", value: 15000000, tier: 2, nationality: "Português", isReserva: false },
-]
-
-// Get all available free agents (players not assigned to any team in current game)
-export function getAllFreePlayers(): Player[] {
-  let id = 500
-  return EUROPEAN_TRANSFER_OPTIONS.map(p => ({
-    ...p,
-    id: id++,
-    teamId: null,
-    sold: false,
-  }))
 }
