@@ -104,7 +104,11 @@ export function MarketPreviewView() {
               {/* Player info */}
               <div className="p-5 flex-1 flex flex-col">
                 <h3 className="text-xl font-bold text-foreground mb-0.5">{opt.player.name}</h3>
-                <p className="text-sm text-muted-foreground mb-4">{POSITION_LABELS[opt.player.position]}</p>
+                <p className="text-sm text-muted-foreground">{POSITION_LABELS[opt.player.position]}</p>
+                {opt.player.sourceClub && (
+                  <p className="text-[11px] text-muted-foreground/60 mb-3">🏟️ {opt.player.sourceClub}</p>
+                )}
+                {!opt.player.sourceClub && <div className="mb-3" />}
 
                 <div className="flex items-center gap-4 mb-5 text-xs text-muted-foreground">
                   <span className="flex items-center gap-1.5">

@@ -85,6 +85,9 @@ function PlayerMarketCard({ player, isSelected, onSelect, canAfford, teamDecreeN
       <div className="mb-3 mt-2">
         <h4 className="font-bold text-foreground text-lg leading-tight">{player.name}</h4>
         <p className="text-xs text-muted-foreground">{POSITION_LABELS[player.position]}</p>
+        {player.sourceClub && (
+          <p className="text-[11px] text-muted-foreground/60 mt-0.5">🏟️ {player.sourceClub}</p>
+        )}
       </div>
 
       <div className="flex items-center gap-3 mb-4 text-xs text-muted-foreground">

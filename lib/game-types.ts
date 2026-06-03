@@ -25,6 +25,7 @@ export type Nationality =
   | "Chileno"
   | "Paraguaio"
   | "Peruano"
+  | "Venezuelano"
   | "Espanhol"
   | "Português"
   | "Inglês"

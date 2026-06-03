@@ -137,10 +137,22 @@ function buildTeamResults(
   return results
 }
 
-// ─── Market Generation (bug-fixed: strict 1×T1, 1×T2, 1×T3, no repeats) ────
-function generateTransferOptions(position: Position, freeAgents: Player[]): RoundTransferOption[] {
+// ─── Market Generation ────────────────────────────────────────────────────────
+// Garante 1×T1, 1×T2, 1×T3 sem repetições.
+// Exclui jogadores cujo sourceClub está entre os times selecionados no jogo.
+function generateTransferOptions(
+  position: Position,
+  freeAgents: Player[],
+  selectedTeamNames: string[] = [],
+): RoundTransferOption[] {
   const byTier = (tier: Tier) =>
-    freeAgents.filter(p => p.position === position && p.tier === tier && !p.sold)
+    freeAgents.filter(p =>
+      p.position === position &&
+      p.tier === tier &&
+      !p.sold &&
+      // Filtro duplo: exclui jogadores de times já selecionados
+      (!p.sourceClub || !selectedTeamNames.includes(p.sourceClub))
+    )
 
   const pickOne = (pool: Player[], usedIds: number[]): Player | null => {
     const available = pool.filter(p => !usedIds.includes(p.id))
@@ -314,11 +326,12 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       if (roundDone) {
         if (state.soldInCurrentRound.length > 0) {
           const pos = state.positionRounds[state.currentPositionIndex]
+          const selectedNames = state.teams.map(t => t.name)
           return {
             ...state,
             phase: "market-preview",
             currentTeamIndex: 0,
-            roundTransferOptions: generateTransferOptions(pos, state.freeAgents),
+            roundTransferOptions: generateTransferOptions(pos, state.freeAgents, selectedNames),
             teams: state.teams.map(t => ({ ...t, blockedPositions: [] })),
           }
         }
@@ -365,11 +378,12 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 
       if (roundDone) {
         const pos = mid.positionRounds[mid.currentPositionIndex]
+        const selectedNames = mid.teams.map(t => t.name)
         return {
           ...mid,
           phase: "market-preview",
           currentTeamIndex: 0,
-          roundTransferOptions: generateTransferOptions(pos, mid.freeAgents),
+          roundTransferOptions: generateTransferOptions(pos, mid.freeAgents, selectedNames),
           teams: mid.teams.map(t => ({ ...t, blockedPositions: [] })),
         }
       }
