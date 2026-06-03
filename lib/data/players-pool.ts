@@ -113,7 +113,7 @@ const TEMPLATES: FreeAgentTemplate[] = [
   // T1
   fa("Casemiro",             "Primeiro-Volante", 25_000_000, 1, "veterano", "Brasileiro"),
   fa("Rodrigo Bentancur",    "Primeiro-Volante", 22_000_000, 1, "veterano", "Uruguaio"),
-  fa("Danilo",               "Primeiro-Volante", 21_000_000, 1, "veterano", "Brasileiro"),
+  fa("Danilo Santos",        "Primeiro-Volante", 21_000_000, 1, "veterano", "Brasileiro"),
   // T2
   fa("Thiago Maia",          "Primeiro-Volante", 13_000_000, 2, "joia",     "Brasileiro"),
   fa("Matías Vecino",        "Primeiro-Volante", 14_000_000, 2, "joia",     "Uruguaio"),
