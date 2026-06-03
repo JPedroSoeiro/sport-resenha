@@ -33,7 +33,7 @@ export function BiddingView() {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-auto py-6 px-4 bg-background/96 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center overflow-auto py-4 px-3 bg-background/96 backdrop-blur-sm">
       <div className="w-full max-w-3xl screen-enter">
         {/* Header badge */}
         <div className="flex justify-center mb-5">
@@ -44,7 +44,7 @@ export function BiddingView() {
           </div>
         </div>
 
-        <h2 className="text-3xl font-bold text-center text-foreground mb-1" style={{ fontFamily: "var(--font-oswald)" }}>
+        <h2 className="text-2xl sm:text-3xl font-bold text-center text-foreground mb-1" style={{ fontFamily: "var(--font-oswald)" }}>
           DISPUTA POR {player.name.toUpperCase()}
         </h2>
         <p className="text-center text-sm text-muted-foreground mb-6">
@@ -95,7 +95,7 @@ export function BiddingView() {
         {/* Bidding team cards */}
         <div className={cn(
           "grid gap-4 mb-6",
-          bidding.teams.length === 2 ? "grid-cols-2" : "grid-cols-1 max-w-sm mx-auto"
+          bidding.teams.length === 2 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 max-w-sm mx-auto"
         )}>
           {bidding.teams.map((tid, idx) => {
             const team = state.teams.find(t => t.id === tid)!
@@ -152,34 +152,72 @@ export function BiddingView() {
                 </div>
 
                 {/* Current bid */}
-                <div className="p-3 rounded-lg bg-secondary border border-border mb-4">
+                <div className="p-3 rounded-lg bg-secondary border border-border mb-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">Seu Lance Atual</span>
-                    <span className={cn("text-lg font-bold", isLeader ? "text-primary" : "text-foreground")}>
-                      {formatCurrency(curBid)}
+                    <span className="text-xs text-muted-foreground">
+                      {isActive ? "Lance mais alto (adversário)" : "Lance mais alto"}
+                    </span>
+                    <span className={cn("text-lg font-bold", isLeader ? "text-primary" : "text-muted-foreground")}>
+                      {formatCurrency(highest)}
                     </span>
                   </div>
-                  {isActive && (
-                    <p className="text-[10px] text-muted-foreground mt-0.5">
-                      Próximo mínimo: {formatCurrency(highest + 1_000_000)}
-                    </p>
+                  {!isActive && curBid > player.value && (
+                    <div className="flex items-center justify-between mt-1">
+                      <span className="text-[10px] text-muted-foreground">Seu lance atual</span>
+                      <span className={cn("text-sm font-semibold", isLeader ? "text-primary" : "text-foreground")}>
+                        {formatCurrency(curBid)}
+                      </span>
+                    </div>
                   )}
                 </div>
 
                 {isActive ? (
-                  <div className="space-y-2.5">
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button onClick={() => handleBid(tid, 1_000_000)} disabled={!can1M} className="font-bold h-10">
-                        <Plus className="w-3.5 h-3.5 mr-1" />€1M
-                      </Button>
-                      <Button onClick={() => handleBid(tid, 5_000_000)} disabled={!can5M} className="font-bold h-10">
-                        <Plus className="w-3.5 h-3.5 mr-1" />€5M
-                      </Button>
-                    </div>
+                  <div className="space-y-2">
+                    {/* Bid option cards — mostram exatamente o que será pago */}
+                    {[
+                      { inc: 1_000_000, label: "+€1M", can: can1M },
+                      { inc: 5_000_000, label: "+€5M", can: can5M },
+                    ].map(({ inc, label, can }) => {
+                      const nextBid = highest + inc
+                      const remaining = team.currentBudget - nextBid
+                      return (
+                        <button
+                          key={inc}
+                          onClick={() => can && handleBid(tid, inc)}
+                          disabled={!can}
+                          className={cn(
+                            "w-full rounded-xl border-2 p-3 text-left transition-all",
+                            can
+                              ? "border-primary/40 bg-primary/5 hover:bg-primary/10 hover:border-primary cursor-pointer"
+                              : "border-border/30 bg-secondary/30 opacity-40 cursor-not-allowed"
+                          )}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center gap-2">
+                              <Plus className="w-3.5 h-3.5 text-primary" />
+                              <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{label}</span>
+                            </div>
+                            <span className="text-base font-bold text-primary">
+                              {formatCurrency(nextBid)}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] text-muted-foreground">Saldo restante</span>
+                            <span className={cn(
+                              "text-[11px] font-semibold",
+                              remaining > 0 ? "text-muted-foreground" : "text-destructive"
+                            )}>
+                              {remaining >= 0 ? formatCurrency(remaining) : "Insuficiente"}
+                            </span>
+                          </div>
+                        </button>
+                      )
+                    })}
+
                     <Button
                       onClick={() => dispatch({ type: "WITHDRAW_BID", teamId: tid })}
                       variant="outline"
-                      className="w-full h-10 border-destructive text-destructive hover:bg-destructive/10 font-bold"
+                      className="w-full h-11 border-destructive text-destructive hover:bg-destructive/10 font-bold"
                     >
                       <X className="w-4 h-4 mr-2" />Desistir
                     </Button>

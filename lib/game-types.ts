@@ -75,6 +75,8 @@ export interface Team {
   secondaryColor: string
   initialBudget: number
   currentBudget: number
+  initialTierAvg: number
+  formation: FormationId   // escolhida no sorteio de cartas
   presidentialDecree: PresidentialDecree | null
   financialCard: FinancialCard | null
   managerId: number | null
@@ -87,7 +89,8 @@ export interface PresidentialDecree {
   name: string
   description: string
   teamId: number
-  validate: (player: Player, team: Team) => boolean
+  validate: (player: Player, team: Team) => boolean         // sempre true agora — sem bloqueio na compra
+  evaluateCompliance: (players: Player[], team: Team, history: FinancialHistoryEntry[]) => boolean  // checado na avaliação final
   penaltyMessage: string
 }
 
@@ -108,6 +111,7 @@ export type GamePhase =
   | "player-setup"
   | "draw-cards"
   | "decision"
+  | "market-preview"   // todos veem as opções juntos — debate antes de escolher
   | "market"
   | "bidding"
   | "special-event"
@@ -167,6 +171,62 @@ export interface GameState {
   auctionLosers: Record<number, Position[]>
   pendingSpecialEvent?: PendingSpecialEvent
 }
+
+// ─── Formações Táticas ────────────────────────────────────────────────────────
+
+export type FormationId = "ataque" | "posse" | "defesa" | "equilibrio"
+
+export interface FormationConfig {
+  id: FormationId
+  name: string
+  shortName: string
+  description: string
+  icon: string
+  // Posições que recebem 2× de peso no cálculo de delta
+  primaryPositions: Position[]
+  bonusDescription: string
+}
+
+export const FORMATIONS: FormationConfig[] = [
+  {
+    id: "ataque",
+    name: "4-3-3 Ataque Total",
+    shortName: "Ataque",
+    description: "Prioriza qualidade nas pontas e no centroavante",
+    icon: "⚡",
+    primaryPositions: ["Ponta-Direita", "Ponta-Esquerdo", "Centroavante"],
+    bonusDescription: "+15 pts se ataque médio ≤ Tier 1.5",
+  },
+  {
+    id: "posse",
+    name: "4-2-3-1 Posse",
+    shortName: "Posse",
+    description: "Prioriza volantes e meia de alta qualidade",
+    icon: "🎯",
+    primaryPositions: ["Primeiro-Volante", "Segundo-Volante", "Meia-Armador"],
+    bonusDescription: "+15 pts se meio-campo médio ≤ Tier 1.5",
+  },
+  {
+    id: "defesa",
+    name: "4-4-2 Bloco Baixo",
+    shortName: "Defesa",
+    description: "Prioriza zagueiros e laterais de qualidade",
+    icon: "🛡️",
+    primaryPositions: ["Zaga-1", "Zaga-2", "Lateral-Direito", "Lateral-Esquerdo"],
+    bonusDescription: "+15 pts se defesa média ≤ Tier 1.5",
+  },
+  {
+    id: "equilibrio",
+    name: "4-3-3 Equilíbrio",
+    shortName: "Equilíbrio",
+    description: "Todas as posições têm peso igual — bônus por elenco consistente",
+    icon: "⚖️",
+    primaryPositions: [],
+    bonusDescription: "+15 pts se tier médio do elenco ≤ 1.8",
+  },
+]
+
+// ─── Positions ────────────────────────────────────────────────────────────────
 
 // 11 positions in game order (decision rounds sequence)
 export const POSITION_ROUNDS: Position[] = [

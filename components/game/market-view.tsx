@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useGame, type Player } from "@/lib/game-context"
 import { Button } from "@/components/ui/button"
-import { ShoppingCart, Check, DollarSign, AlertTriangle, Flag, Shield, Ban, UserCheck, ChevronRight } from "lucide-react"
+import { ShoppingCart, Check, DollarSign, AlertTriangle, Flag, Shield, UserCheck, ChevronRight, FileText, Ban } from "lucide-react"
 import { POSITION_LABELS } from "@/lib/game-types"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
@@ -40,23 +40,14 @@ interface PlayerCardProps {
   isSelected: boolean
   onSelect: () => void
   canAfford: boolean
-  blockMsg?: string
+  teamDecreeName?: string  // só para mostrar lembrete, não bloquear
 }
 
-function PlayerMarketCard({ player, isSelected, onSelect, canAfford, blockMsg }: PlayerCardProps) {
+function PlayerMarketCard({ player, isSelected, onSelect, canAfford, teamDecreeName }: PlayerCardProps) {
   const { formatCurrency } = useGame()
   const ts = TIER_STYLE[player.tier as 1 | 2 | 3]
-  const disabled = !canAfford || !!blockMsg
 
   const handleClick = () => {
-    if (blockMsg) {
-      toast.error("Decreto violado!", {
-        description: blockMsg,
-        duration: 3500,
-        icon: "📜",
-      })
-      return
-    }
     if (!canAfford) {
       toast.warning("Orçamento insuficiente!", {
         description: `Você precisa de ${formatCurrency(player.value)} mas tem menos disponível.`,
@@ -74,7 +65,7 @@ function PlayerMarketCard({ player, isSelected, onSelect, canAfford, blockMsg }:
         "relative rounded-xl border-2 p-5 transition-all select-none cursor-pointer",
         isSelected
           ? ts.selectedBorder + " bg-card"
-          : disabled
+          : !canAfford
           ? "border-border/40 bg-card/50 opacity-55"
           : cn("bg-card hover:border-primary/40", ts.border)
       )}
@@ -90,14 +81,6 @@ function PlayerMarketCard({ player, isSelected, onSelect, canAfford, blockMsg }:
           </div>
         )}
       </div>
-
-      {/* Blocked overlay */}
-      {blockMsg && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 rounded-xl gap-1">
-          <Ban className="w-7 h-7 text-destructive" />
-          <span className="text-[10px] font-bold text-destructive uppercase text-center px-2">{blockMsg}</span>
-        </div>
-      )}
 
       <div className="mb-3 mt-2">
         <h4 className="font-bold text-foreground text-lg leading-tight">{player.name}</h4>
@@ -258,21 +241,32 @@ export function MarketView() {
         <span className="text-xs text-muted-foreground">Time {teamIdx + 1}/{teamsNeeding.length}</span>
       </div>
 
+      {/* Decreto — lembrete visível (não bloqueia, mas penaliza no final) */}
+      {currentTeam.presidentialDecree && (
+        <div className="max-w-4xl mx-auto w-full mb-4 px-4 py-2.5 rounded-xl bg-violet-500/8 border border-violet-500/25 flex items-center gap-2">
+          <FileText className="w-4 h-4 text-violet-500 flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <span className="text-xs font-bold text-violet-500 dark:text-violet-400">{currentTeam.presidentialDecree.name}</span>
+            <span className="text-xs text-muted-foreground ml-2">{currentTeam.presidentialDecree.description}</span>
+          </div>
+          <span className="text-[10px] font-bold text-violet-400 bg-violet-500/15 px-2 py-0.5 rounded-full flex-shrink-0">
+            −20 pts se violar
+          </span>
+        </div>
+      )}
+
       {/* 3 Transfer options */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto w-full mb-5">
-        {options.map(opt => {
-          const val = validateSigning(currentTeam.id, opt.player)
-          return (
-            <PlayerMarketCard
-              key={opt.player.id}
-              player={opt.player}
-              isSelected={sel === opt.player.id}
-              onSelect={() => handleSelect(opt.player.id)}
-              canAfford={currentTeam.currentBudget >= opt.player.value}
-              blockMsg={!val.valid ? val.message : undefined}
-            />
-          )
-        })}
+        {options.map(opt => (
+          <PlayerMarketCard
+            key={opt.player.id}
+            player={opt.player}
+            isSelected={sel === opt.player.id}
+            onSelect={() => handleSelect(opt.player.id)}
+            canAfford={currentTeam.currentBudget >= opt.player.value}
+            teamDecreeName={currentTeam.presidentialDecree?.name}
+          />
+        ))}
       </div>
 
       {/* Reserve option */}

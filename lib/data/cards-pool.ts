@@ -1,110 +1,122 @@
-import type { PresidentialDecree, FinancialCard, Player, Team } from "../game-types"
+import type { PresidentialDecree, FinancialCard, Player, Team, FinancialHistoryEntry } from "../game-types"
 
 type DecreeTemplate = Omit<PresidentialDecree, "teamId">
 
 // ─── Presidential Decrees ─────────────────────────────────────────────────────
-// Regras: NENHUM decreto usa nacionalidade (funciona nos dois campeonatos).
-// Decrees devem criar tensão estratégica, nunca tornar o jogo inviável.
-// Todos os decretos de validação-em-compra têm T2 disponível para cada posição.
+// validate:            sempre retorna true — o jogo não bloqueia compras
+// evaluateCompliance:  checado na avaliação final — viola → perde os 20 pts de decreto
+//
+// Todos os checks são sobre o ELENCO FINAL (mais simples e consistente):
+//   - Se trouxe um T3 zagueiro → violou Zaga de Aço, não importa quando comprou
+//   - Isso cria tensão real: o jogador vê o decreto e TEM que lembrar durante o jogo
 
 export const DECREES_POOL: DecreeTemplate[] = [
   {
     id: 1,
     name: "Zaga de Aço",
-    description: "Zagueiros contratados devem ser Tier 1 ou Tier 2 obrigatoriamente",
-    validate: (player: Player) => {
-      if ((player.position === "Zaga-1" || player.position === "Zaga-2") && player.tier === 3) return false
-      return true
-    },
-    penaltyMessage: "Decreto violado! Zagueiro Tier 3 não é permitido.",
+    description: "Elenco final não pode ter zagueiros Tier 3",
+    validate: () => true,
+    evaluateCompliance: (players) =>
+      !players.some(p => (p.position === "Zaga-1" || p.position === "Zaga-2") && p.tier === 3),
+    penaltyMessage: "Zagueiro Tier 3 no elenco — Decreto violado!",
   },
   {
     id: 2,
     name: "Prata da Casa",
-    description: "Proibido contratar jogadores Tier 1 nesta janela de transferências",
-    validate: (player: Player) => player.tier !== 1,
-    penaltyMessage: "Decreto violado! Jogadores Tier 1 estão proibidos nesta janela.",
+    description: "Elenco final não pode ter nenhum jogador Tier 1",
+    validate: () => true,
+    evaluateCompliance: (players) =>
+      !players.some(p => p.tier === 1),
+    penaltyMessage: "Jogador Tier 1 encontrado no elenco — Decreto violado!",
   },
   {
     id: 3,
     name: "Sem Artilheiros Baratos",
-    description: "Pontas e centroavante não podem ser Tier 3",
-    validate: (player: Player) => {
+    description: "Pontas e centroavante no elenco final não podem ser Tier 3",
+    validate: () => true,
+    evaluateCompliance: (players) => {
       const attackPositions = ["Ponta-Direita", "Ponta-Esquerdo", "Centroavante"]
-      if (attackPositions.includes(player.position) && player.tier === 3) return false
-      return true
+      return !players.some(p => attackPositions.includes(p.position) && p.tier === 3)
     },
-    penaltyMessage: "Decreto violado! Atacante Tier 3 bloqueado nesta janela.",
+    penaltyMessage: "Atacante Tier 3 no elenco — Decreto violado!",
   },
   {
     id: 4,
     name: "Juventude Obrigatória",
-    description: "Deve manter ao menos 3 jogadores Tier 3 no elenco final",
-    validate: () => true, // Verificado na avaliação final
-    penaltyMessage: "Decreto não cumprido! Faltam jovens da base no elenco.",
+    description: "Elenco final deve ter ao menos 3 jogadores Tier 3",
+    validate: () => true,
+    evaluateCompliance: (players) =>
+      players.filter(p => p.tier === 3).length >= 3,
+    penaltyMessage: "Menos de 3 jogadores Tier 3 no elenco — Decreto não cumprido!",
   },
   {
     id: 5,
     name: "Goleiro de Respeito",
-    description: "O goleiro contratado deve ser Tier 1 ou Tier 2 obrigatoriamente",
-    validate: (player: Player) => {
-      if (player.position === "Goleiro" && player.tier === 3) return false
-      return true
+    description: "O goleiro no elenco final não pode ser Tier 3",
+    validate: () => true,
+    evaluateCompliance: (players) => {
+      const gk = players.find(p => p.position === "Goleiro")
+      return !gk || gk.tier !== 3
     },
-    penaltyMessage: "Decreto violado! Goleiro Tier 3 não é permitido.",
+    penaltyMessage: "Goleiro Tier 3 no elenco — Decreto violado!",
   },
   {
     id: 6,
     name: "Centroavante de Qualidade",
-    description: "O centroavante contratado deve ser Tier 1 ou Tier 2",
-    validate: (player: Player) => {
-      if (player.position === "Centroavante" && player.tier === 3) return false
-      return true
+    description: "O centroavante no elenco final não pode ser Tier 3",
+    validate: () => true,
+    evaluateCompliance: (players) => {
+      const ca = players.find(p => p.position === "Centroavante")
+      return !ca || ca.tier !== 3
     },
-    penaltyMessage: "Decreto violado! Centroavante Tier 3 não é permitido.",
+    penaltyMessage: "Centroavante Tier 3 no elenco — Decreto violado!",
   },
   {
     id: 7,
     name: "Meio-Campo Técnico",
-    description: "Volantes e meias contratados devem ser Tier 1 ou Tier 2",
-    validate: (player: Player) => {
+    description: "Volantes e meia no elenco final não podem ser Tier 3",
+    validate: () => true,
+    evaluateCompliance: (players) => {
       const midPositions = ["Primeiro-Volante", "Segundo-Volante", "Meia-Armador"]
-      if (midPositions.includes(player.position) && player.tier === 3) return false
-      return true
+      return !players.some(p => midPositions.includes(p.position) && p.tier === 3)
     },
-    penaltyMessage: "Decreto violado! Volante/Meia Tier 3 bloqueado.",
+    penaltyMessage: "Volante/Meia Tier 3 no elenco — Decreto violado!",
   },
   {
     id: 8,
     name: "Laterais Qualificados",
-    description: "Laterais contratados devem ser Tier 1 ou Tier 2",
-    validate: (player: Player) => {
-      if ((player.position === "Lateral-Direito" || player.position === "Lateral-Esquerdo") && player.tier === 3) return false
-      return true
+    description: "Laterais no elenco final não podem ser Tier 3",
+    validate: () => true,
+    evaluateCompliance: (players) => {
+      return !players.some(
+        p => (p.position === "Lateral-Direito" || p.position === "Lateral-Esquerdo") && p.tier === 3
+      )
     },
-    penaltyMessage: "Decreto violado! Lateral Tier 3 não é permitido.",
+    penaltyMessage: "Lateral Tier 3 no elenco — Decreto violado!",
   },
   {
     id: 9,
     name: "Orçamento Disciplinado",
-    description: "Nenhum jogador contratado pode custar mais que 50% do seu caixa atual",
-    validate: (player: Player, team: Team) => {
-      return player.value <= team.currentBudget * 0.5
+    description: "Não pode ter gasto mais de 70% do orçamento inicial no total",
+    validate: () => true,
+    evaluateCompliance: (_players, team) => {
+      const spent = team.initialBudget - team.currentBudget
+      return spent <= team.initialBudget * 0.70
     },
-    penaltyMessage: "Decreto violado! Contratação excede 50% do caixa disponível.",
+    penaltyMessage: "Gastos acima de 70% do orçamento — Decreto violado!",
   },
   {
     id: 10,
     name: "Pressão Máxima",
-    description: "Proibido contratar Tier 2 — apenas Tier 1 (estrelas) ou Tier 3 (aposta)",
-    validate: (player: Player) => player.tier !== 2,
-    penaltyMessage: "Decreto violado! Jogadores Tier 2 são proibidos nesta janela.",
+    description: "Elenco final não pode ter nenhum jogador Tier 2 (só Tier 1 ou Tier 3)",
+    validate: () => true,
+    evaluateCompliance: (players) =>
+      !players.some(p => p.tier === 2),
+    penaltyMessage: "Jogador Tier 2 encontrado — Decreto violado! (só T1 ou T3)",
   },
 ]
 
 // ─── Financial Cards ──────────────────────────────────────────────────────────
-// Valores proporcionais: bônus e penalidades representam ±25-40% de um orçamento médio.
-// Isso mantém impacto em qualquer campeonato sem ser devastador.
 
 export const FINANCIAL_CARDS_POOL: FinancialCard[] = [
   { id: 1,  name: "Patrocínio Master",         description: "+€15M de patrocínio corporativo",                effect: "add",      value: 15_000_000 },

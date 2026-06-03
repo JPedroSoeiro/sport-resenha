@@ -22,7 +22,8 @@ import { FREE_AGENTS_POOL } from "./data/players-pool"
 import { FREE_AGENTS_POOL_EUROPE } from "./data/players-pool-europe"
 import { DECREES_POOL, FINANCIAL_CARDS_POOL } from "./data/cards-pool"
 import { EVENTS_POOL, MILD_EVENTS, type SpecialEventDef } from "./data/events-pool"
-import type { ChampionshipId, PendingSpecialEvent, SpecialEventResult } from "./game-types"
+import type { ChampionshipId, FormationId, PendingSpecialEvent, SpecialEventResult } from "./game-types"
+import { FORMATIONS } from "./game-types"
 
 export type { Player, Team, Position, GamePhase, PresidentialDecree, FinancialCard }
 
@@ -42,6 +43,8 @@ type GameAction =
   | { type: "CONFIRM_SELECTIONS" }
   | { type: "PLACE_BID"; teamId: number; amount: number }
   | { type: "WITHDRAW_BID"; teamId: number }
+  | { type: "SET_FORMATION"; teamId: number; formation: FormationId }
+  | { type: "ADVANCE_TO_MARKET" }
   | { type: "DISMISS_SPECIAL_EVENT" }
   | { type: "RESET_GAME" }
 
@@ -197,10 +200,18 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       const teamPlayers = state.championship === "premier-league"
         ? getPLTeamPlayers(action.teamId)
         : getTeamPlayers(action.teamId)
+      // Calcular média de tier dos titulares para base da pontuação por delta
+      const titulares = teamPlayers.filter(p => !p.isReserva)
+      const initialTierAvg = titulares.length
+        ? titulares.reduce((s, p) => s + p.tier, 0) / titulares.length
+        : 2.0
+
       const newTeam: Team = {
         ...teamConfig,
         initialBudget: state.globalBudget,
         currentBudget: state.globalBudget,
+        initialTierAvg,
+        formation: "equilibrio",  // padrão, sobrescrito em SET_FORMATION
         presidentialDecree: null,
         financialCard: null,
         managerId: action.managerId,
@@ -305,7 +316,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
           const pos = state.positionRounds[state.currentPositionIndex]
           return {
             ...state,
-            phase: "market",
+            phase: "market-preview",
             currentTeamIndex: 0,
             roundTransferOptions: generateTransferOptions(pos, state.freeAgents),
             teams: state.teams.map(t => ({ ...t, blockedPositions: [] })),
@@ -356,7 +367,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         const pos = mid.positionRounds[mid.currentPositionIndex]
         return {
           ...mid,
-          phase: "market",
+          phase: "market-preview",
           currentTeamIndex: 0,
           roundTransferOptions: generateTransferOptions(pos, mid.freeAgents),
           teams: mid.teams.map(t => ({ ...t, blockedPositions: [] })),
@@ -462,6 +473,17 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 
       return { ...baseNext, phase: "decision" }
     }
+
+    case "SET_FORMATION":
+      return {
+        ...state,
+        teams: state.teams.map(t =>
+          t.id === action.teamId ? { ...t, formation: action.formation } : t
+        ),
+      }
+
+    case "ADVANCE_TO_MARKET":
+      return { ...state, phase: "market" }
 
     case "DISMISS_SPECIAL_EVENT": {
       const pending = state.pendingSpecialEvent
@@ -721,7 +743,7 @@ interface GameContextType {
   getTransferOptions: () => RoundTransferOption[]
   formatCurrency: (value: number) => string
   validateSigning: (teamId: number, player: Player) => { valid: boolean; message?: string }
-  calculateTeamScore: (teamId: number) => { grade: string; score: number; details: string }
+  calculateTeamScore: (teamId: number) => { grade: string; score: number; details: string; decreeComplied: boolean }
   getManagerName: (teamId: number) => string
   isPositionBlocked: (teamId: number, position: Position) => boolean
   getFinancialHistory: (teamId: number) => FinancialHistoryEntry[]
@@ -754,24 +776,56 @@ export function GameProvider({ children }: { children: ReactNode }) {
     const team = state.teams.find(t => t.id === teamId)!
     if (team.currentBudget < player.value) return { valid: false, message: "Orçamento insuficiente!" }
     if (team.blockedPositions.includes(player.position)) return { valid: false, message: "Posição bloqueada! Use o reserva." }
-    if (team.presidentialDecree) {
-      const ok = team.presidentialDecree.validate(player, team)
-      if (!ok) return { valid: false, message: team.presidentialDecree.penaltyMessage }
-    }
+    // Decreto não bloqueia mais na compra — será checado na avaliação final
     return { valid: true }
   }
 
   const calculateTeamScore = (teamId: number) => {
     const team = state.teams.find(t => t.id === teamId)!
     const players = getTeamPlayers(teamId)
-    if (players.length === 0) return { grade: "C", score: 0, details: "Sem jogadores" }
+    if (players.length === 0) return { grade: "C", score: 0, details: "Sem jogadores", decreeComplied: true }
 
-    const avgTier = players.reduce((s, p) => s + p.tier, 0) / players.length
-    const tierScore = ((3 - avgTier) / 2) * 40
+    // ── 1. Delta de qualidade (0–50 pts) ──────────────────────────────────
+    // Mede melhoria em relação ao elenco inicial.
+    // Quem pega time forte (tier 1.5) e mantém tem delta pequeno.
+    // Quem pega time fraco (tier 2.5) e melhora muito ganha mais pts.
+    const initialAvg = team.initialTierAvg ?? 2.0
+    const finalAvg   = players.reduce((s, p) => s + p.tier, 0) / players.length
+    const improvement = initialAvg - finalAvg            // positivo = melhorou qualidade
+    const deltaScore  = Math.min(Math.max((improvement / 2.0) * 50, 0), 50)
+
+    // ── 2. Saúde financeira (0–30 pts) ────────────────────────────────────
     const budgetRatio = team.currentBudget / team.initialBudget
     const budgetScore = Math.min(budgetRatio * 30, 30)
+
+    // ── 3. Decreto presidencial (0–15 pts) ────────────────────────────────
+    let decreeScore = 15
+    let decreeComplied = true
+    if (team.presidentialDecree) {
+      decreeComplied = team.presidentialDecree.evaluateCompliance(players, team, team.financialHistory)
+      decreeScore = decreeComplied ? 15 : 0
+    }
+
+    // ── 4. Bônus de formação (0–15 pts) ───────────────────────────────────
+    const formationCfg = FORMATIONS.find(f => f.id === team.formation)
+    let formationBonus = 0
+    if (formationCfg) {
+      if (formationCfg.id === "equilibrio") {
+        const overall = players.reduce((s, p) => s + p.tier, 0) / players.length
+        formationBonus = overall <= 1.8 ? 15 : overall <= 2.2 ? 8 : 0
+      } else {
+        const primary = players.filter(p => formationCfg.primaryPositions.includes(p.position))
+        if (primary.length > 0) {
+          const avg = primary.reduce((s, p) => s + p.tier, 0) / primary.length
+          formationBonus = avg <= 1.33 ? 15 : avg <= 1.67 ? 10 : avg <= 2.0 ? 5 : 0
+        }
+      }
+    }
+
+    // ── 5. Penalidades de reserva (−5 pts cada) ───────────────────────────
     const penalties = players.filter(p => p.activatedFromReserve).length * 5
-    const total = Math.max(0, tierScore + budgetScore + 30 - penalties)
+
+    const total = Math.max(0, deltaScore + budgetScore + decreeScore + formationBonus - penalties)
 
     let grade = "C"
     if (total >= 90) grade = "A+"
@@ -783,7 +837,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
     return {
       grade,
       score: total,
-      details: `Qualidade: ${tierScore.toFixed(0)}/40 | Finanças: ${budgetScore.toFixed(0)}/30 | Decretos: 30/30 | Penalidades: -${penalties}`,
+      decreeComplied,
+      details: `Delta: ${deltaScore.toFixed(0)}/45 | Finanças: ${budgetScore.toFixed(0)}/25 | Decreto: ${decreeScore}/15 | Formação: +${formationBonus}/15 | Penalidades: -${penalties}`,
     }
   }
 

@@ -1,9 +1,8 @@
 /**
  * Utilitários de salvar/carregar partida via Base64.
  *
- * O único campo que não serializa diretamente é `validate` nos decretos
- * (é uma função). A solução: salvar apenas o `id` e reconstruir a função
- * ao carregar usando DECREES_POOL.
+ * validate e evaluateCompliance são funções e não serializam em JSON.
+ * Solução: salvar só o `id`, reconstruir as funções ao carregar via DECREES_POOL.
  */
 import type { GameState, PresidentialDecree, Team } from "./game-types"
 import { DECREES_POOL } from "./data/cards-pool"
@@ -27,19 +26,20 @@ function decode(b64: string): string {
   )
 }
 
-// ─── Decreto sem função (serializável) ───────────────────────────────────────
+// ─── Decreto sem funções (serializável) ───────────────────────────────────────
 
-type DecreeSnapshot = Omit<PresidentialDecree, "validate">
+type DecreeSnapshot = Omit<PresidentialDecree, "validate" | "evaluateCompliance">
 
 function stripDecree(d: PresidentialDecree): DecreeSnapshot {
-  const { validate: _, ...rest } = d
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { validate: _v, evaluateCompliance: _e, ...rest } = d
   return rest
 }
 
 function restoreDecree(snap: DecreeSnapshot): PresidentialDecree {
   const template = DECREES_POOL.find(t => t.id === snap.id)
   return {
-    ...(template ?? { validate: () => true, penaltyMessage: "" }),
+    ...(template ?? { validate: () => true, evaluateCompliance: () => true, penaltyMessage: "" }),
     ...snap,
   }
 }
@@ -54,7 +54,6 @@ export function serializeState(state: GameState): string {
       ...team,
       presidentialDecree: team.presidentialDecree ? stripDecree(team.presidentialDecree) : null,
     })),
-    // bidding.player pode conter objetos serializáveis — OK
   }
   return encode(JSON.stringify(payload))
 }
@@ -69,10 +68,13 @@ export function deserializeState(code: string): GameState | null {
       (d: DecreeSnapshot) => restoreDecree(d)
     )
 
-    const teams: Team[] = (raw.teams ?? []).map((team: Team & { presidentialDecree: DecreeSnapshot | null }) => ({
-      ...team,
-      presidentialDecree: team.presidentialDecree ? restoreDecree(team.presidentialDecree) : null,
-    }))
+    const teams: Team[] = (raw.teams ?? []).map(
+      (team: Team & { presidentialDecree: DecreeSnapshot | null }) => ({
+        ...team,
+        initialTierAvg: team.initialTierAvg ?? 2.0,
+        presidentialDecree: team.presidentialDecree ? restoreDecree(team.presidentialDecree) : null,
+      })
+    )
 
     return { ...raw, decreePool, teams } as GameState
   } catch {
@@ -87,7 +89,6 @@ export async function copyToClipboard(text: string): Promise<boolean> {
     await navigator.clipboard.writeText(text)
     return true
   } catch {
-    // Fallback para navegadores antigos
     const el = document.createElement("textarea")
     el.value = text
     el.style.position = "fixed"

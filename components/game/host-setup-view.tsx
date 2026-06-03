@@ -25,6 +25,12 @@ const BUDGET_PRESETS_PL = [
   { label: "€300M", value: 300_000_000, description: "Dinheiro Infinito" },
 ]
 
+// Orçamento recomendado por campeonato (exibido no card de seleção)
+const RECOMMENDED_BUDGET: Record<ChampionshipId, string> = {
+  "brasileirao":    "€50M",
+  "premier-league": "€150M",
+}
+
 export function HostSetupView() {
   const { dispatch, formatCurrency } = useGame()
 
@@ -127,14 +133,19 @@ export function HostSetupView() {
                       </div>
                       <p className="text-xs text-muted-foreground/80">{champ.description}</p>
 
-                      {/* Pool badge */}
-                      <div className={cn(
-                        "inline-flex items-center gap-1 mt-2 px-2 py-0.5 rounded-full text-[10px] font-bold border",
-                        champ.poolRegion === "sul-americana"
-                          ? "bg-amber-500/10 text-amber-600 border-amber-500/30 dark:text-amber-400"
-                          : "bg-blue-500/10 text-blue-600 border-blue-500/30 dark:text-blue-400"
-                      )}>
-                        🌎 Mercado {champ.poolRegion === "sul-americana" ? "Sul-Americano" : "Europeu"}
+                      {/* Badges */}
+                      <div className="flex items-center gap-2 mt-2 flex-wrap">
+                        <div className={cn(
+                          "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border",
+                          champ.poolRegion === "sul-americana"
+                            ? "bg-amber-500/10 text-amber-600 border-amber-500/30 dark:text-amber-400"
+                            : "bg-blue-500/10 text-blue-600 border-blue-500/30 dark:text-blue-400"
+                        )}>
+                          🌎 Mercado {champ.poolRegion === "sul-americana" ? "Sul-Americano" : "Europeu"}
+                        </div>
+                        <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border bg-primary/10 text-primary border-primary/30">
+                          💰 Recomendado: {RECOMMENDED_BUDGET[champ.id]}
+                        </div>
                       </div>
                     </div>
 

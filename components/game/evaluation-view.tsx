@@ -47,11 +47,18 @@ export function EvaluationView() {
   const [historyId, setHistoryId] = useState<number | null>(null)
   const [fieldId, setFieldId] = useState<number | null>(null)
   const [exportingId, setExportingId] = useState<number | null>(null)
+  const [revealedIds, setRevealedIds] = useState<Set<number>>(new Set())
   const cardRefs = useRef<Record<number, HTMLDivElement | null>>({})
 
   const scores = state.teams.map(team => ({ team, ...calculateTeamScore(team.id) }))
+  // Pior para melhor — order de reveal (suspense: revela do pior para o campeão)
   const sorted = [...scores].sort((a, b) => b.score - a.score)
   const winner = sorted[0]
+  const allRevealed = revealedIds.size === state.teams.length
+
+  const handleReveal = (teamId: number) => {
+    setRevealedIds(prev => new Set([...prev, teamId]))
+  }
 
   const handleExportImage = async (teamId: number) => {
     const el = cardRefs.current[teamId]
@@ -95,25 +102,45 @@ export function EvaluationView() {
         <h2 className="text-3xl font-bold text-foreground" style={{ fontFamily: "var(--font-oswald)" }}>
           AVALIAÇÃO FINAL
         </h2>
-        <p className="text-muted-foreground mt-1 text-sm">Análise completa das reconstruções</p>
+        <p className="text-muted-foreground mt-1 text-sm">
+          {allRevealed ? "Análise completa das reconstruções" : `Revele os resultados — do pior ao campeão`}
+        </p>
       </div>
 
-      {/* Winner banner */}
-      <div className="max-w-2xl mx-auto mb-8 p-5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-500/15 to-amber-500/10 border border-amber-500/30">
-        <div className="flex items-center justify-center gap-4">
-          <Award className="w-7 h-7 text-amber-500 flex-shrink-0" />
-          <div className="text-center">
-            <p className="text-xs text-amber-500 uppercase tracking-widest font-bold mb-0.5">Melhor Reconstrução</p>
-            <h3 className="text-2xl font-bold text-foreground">{winner.team.name}</h3>
-            <p className="text-sm text-muted-foreground">
-              {getManagerName(winner.team.id)} · Nota {winner.grade} · {winner.score.toFixed(0)} pts
-            </p>
+      {/* Winner banner — só aparece quando tudo foi revelado */}
+      {allRevealed && (
+        <div className="max-w-2xl mx-auto mb-8 p-5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-500/15 to-amber-500/10 border border-amber-500/30 screen-enter">
+          <div className="flex items-center justify-center gap-4">
+            <Award className="w-7 h-7 text-amber-500 flex-shrink-0" />
+            <div className="text-center">
+              <p className="text-xs text-amber-500 uppercase tracking-widest font-bold mb-0.5">🏆 Campeão da Reconstrução</p>
+              <h3 className="text-2xl font-bold text-foreground">{winner.team.name}</h3>
+              <p className="text-sm text-muted-foreground">
+                {getManagerName(winner.team.id)} · Nota {winner.grade} · {winner.score.toFixed(0)} pts
+              </p>
+            </div>
+            <Award className="w-7 h-7 text-amber-500 flex-shrink-0" />
           </div>
-          <Award className="w-7 h-7 text-amber-500 flex-shrink-0" />
         </div>
-      </div>
+      )}
 
-      {/* Quick comparison */}
+      {/* Reveal progress */}
+      {!allRevealed && (
+        <div className="max-w-2xl mx-auto mb-6 flex items-center gap-3">
+          <div className="flex-1 h-1.5 bg-secondary rounded-full overflow-hidden">
+            <div
+              className="h-full bg-primary rounded-full transition-all duration-500"
+              style={{ width: `${(revealedIds.size / state.teams.length) * 100}%` }}
+            />
+          </div>
+          <span className="text-xs text-muted-foreground flex-shrink-0">
+            {revealedIds.size}/{state.teams.length} revelados
+          </span>
+        </div>
+      )}
+
+      {/* Quick comparison — só após tudo revelado */}
+      {allRevealed && (
       <div className="max-w-4xl mx-auto mb-8 p-4 rounded-xl bg-card border border-border">
         <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest text-center mb-4">Comparativo</p>
         <div className={cn("grid gap-3", state.playerCount <= 3 ? "grid-cols-3" : "grid-cols-4")}>
@@ -138,10 +165,14 @@ export function EvaluationView() {
           })}
         </div>
       </div>
+      )}
 
-      {/* Team detail cards */}
+      {/* Team detail cards — revelação com suspense, do pior para o melhor */}
       <div className={cn("grid gap-6 max-w-7xl mx-auto", state.playerCount <= 2 ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1 lg:grid-cols-3")}>
-        {sorted.map(({ team, grade, score, details }, i) => {
+        {/* Exibe na ordem inversa para o reveal (pior primeiro, campeão por último) */}
+        {[...sorted].reverse().map(({ team, grade, score, details, decreeComplied }, revIdx) => {
+          const isRevealed = revealedIds.has(team.id)
+          const rankPos = sorted.findIndex(s => s.team.id === team.id)  // 0 = campeão
           const players = getTeamPlayers(team.id).filter(p => !p.sold)
           const avgTier = players.length ? players.reduce((s, p) => s + p.tier, 0) / players.length : 3
           const budgetPct = (team.currentBudget / team.initialBudget) * 100
@@ -150,14 +181,47 @@ export function EvaluationView() {
           const history = getFinancialHistory(team.id)
           const totalSpent = history.filter(h => h.type === "signing" || h.type === "auction_win").reduce((s, h) => s + h.amount, 0)
           const totalEarned = history.filter(h => h.type === "sale").reduce((s, h) => s + h.amount, 0)
+          const i = rankPos  // mantém compatibilidade com código abaixo
 
+          // ── Card ainda não revelado ──────────────────────────────────────
+          const posLabel =
+            rankPos === 0 ? "1º Lugar" :
+            rankPos === 1 ? "2º Lugar" :
+            rankPos === 2 ? "3º Lugar" :
+            `${rankPos + 1}º Lugar`
+
+          if (!isRevealed) {
+            return (
+              <div
+                key={team.id}
+                className="rounded-2xl border-2 border-border bg-card overflow-hidden flex flex-col items-center justify-center min-h-[240px]"
+              >
+                {/* Apenas a posição — sem revelar o time */}
+                <p className="text-5xl font-bold text-muted-foreground/20 mb-1" style={{ fontFamily: "var(--font-oswald)" }}>?</p>
+                <p className="text-lg font-bold text-foreground mb-1" style={{ fontFamily: "var(--font-oswald)" }}>
+                  {posLabel.toUpperCase()}
+                </p>
+                <p className="text-xs text-muted-foreground mb-6">Clique para revelar</p>
+
+                <button
+                  onClick={() => handleReveal(team.id)}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary/10 border border-primary/30 text-primary font-bold hover:bg-primary/20 transition-all"
+                >
+                  <Star className="w-4 h-4" />
+                  Revelar resultado
+                </button>
+              </div>
+            )
+          }
+
+          // ── Card revelado ─────────────────────────────────────────────────
           return (
             <div
               key={team.id}
               ref={(el) => { cardRefs.current[team.id] = el }}
               className={cn(
-                "rounded-2xl border-2 overflow-hidden flex flex-col",
-                i === 0 ? "border-amber-500/50 bg-amber-500/3" : "border-border bg-card"
+                "rounded-2xl border-2 overflow-hidden flex flex-col screen-enter",
+                rankPos === 0 ? "border-amber-500/50 bg-amber-500/3" : "border-border bg-card"
               )}
             >
               {/* Rank bar */}
@@ -238,12 +302,24 @@ export function EvaluationView() {
                 </div>
               )}
               {team.presidentialDecree && (
-                <div className="px-4 py-2.5 border-b border-border bg-violet-500/5">
+                <div className={cn(
+                  "px-4 py-2.5 border-b border-border",
+                  decreeComplied ? "bg-violet-500/5" : "bg-destructive/5"
+                )}>
                   <div className="flex items-start gap-2">
-                    <FileText className="w-3.5 h-3.5 text-violet-500 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-xs font-semibold text-violet-500 dark:text-violet-400">{team.presidentialDecree.name}</p>
+                    <FileText className={cn("w-3.5 h-3.5 flex-shrink-0 mt-0.5", decreeComplied ? "text-violet-500" : "text-destructive")} />
+                    <div className="flex-1 min-w-0">
+                      <p className={cn("text-xs font-semibold", decreeComplied ? "text-violet-500 dark:text-violet-400" : "text-destructive")}>
+                        {team.presidentialDecree.name}
+                        {decreeComplied
+                          ? <span className="ml-2 text-[9px] bg-primary/15 text-primary px-1.5 py-0.5 rounded-full">✓ CUMPRIDO +20 pts</span>
+                          : <span className="ml-2 text-[9px] bg-destructive/15 text-destructive px-1.5 py-0.5 rounded-full">✗ VIOLADO −20 pts</span>
+                        }
+                      </p>
                       <p className="text-[10px] text-muted-foreground/70 leading-tight mt-0.5">{team.presidentialDecree.description}</p>
+                      {!decreeComplied && (
+                        <p className="text-[10px] text-destructive/80 mt-0.5 font-medium">{team.presidentialDecree.penaltyMessage}</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -386,7 +462,7 @@ export function EvaluationView() {
                 </Button>
               </div>
             </div>
-          )
+          )  // end revealed card
         })}
       </div>
 
